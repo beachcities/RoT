@@ -33,4 +33,4 @@
 
 ## ライセンス
 
-未定（検討中）。
+文書は [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)、コードとデータは [Apache License 2.0](LICENSE) の下で提供します。詳細は [LICENSE-NOTICE.md](LICENSE-NOTICE.md) を参照してください。
