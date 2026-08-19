@@ -108,13 +108,13 @@ def s_no_usage(ctx):
 def s_retry(ctx):
     """2回外して3回目に正答。失敗試行のトークンが分母に積まれるはず。"""
     if ctx.attempt < 3:
-        return _response(_wrong(ctx), _usage(420 + 40 * ctx.attempt, 30, reasoning_tokens=120))
-    return _response(_correct(ctx), _usage(500, 40, reasoning_tokens=90))
+        return _response(_wrong(ctx), _usage(420 + 40 * ctx.attempt, 150, reasoning_tokens=120))
+    return _response(_correct(ctx), _usage(500, 130, reasoning_tokens=90))
 
 
 def s_always_wrong(ctx):
     """MAX_ATTEMPTS まで外し続ける。success=False、ROT=0。"""
-    return _response(_wrong(ctx), _usage(420 + 40 * ctx.attempt, 30, reasoning_tokens=150))
+    return _response(_wrong(ctx), _usage(420 + 40 * ctx.attempt, 180, reasoning_tokens=150))
 
 
 def s_mixed_reasoning(ctx):
@@ -146,6 +146,11 @@ def s_fullwidth(ctx):
     return _response(wide, _usage(420, 60, reasoning_tokens=10))
 
 
+def s_inconsistent_usage(ctx):
+    """reasoning が completion を上回る、あり得ない内訳を返すサーバ。"""
+    return _response(_correct(ctx), _usage(420, 30, reasoning_tokens=150))
+
+
 def s_error(ctx):
     """1回目から通信が失敗する。"""
     raise MockAPIError("mock: connection reset by peer")
@@ -166,8 +171,8 @@ def s_varied(ctx):
     """
     needed = 1 if ctx.condition == "raw" else 2
     if ctx.attempt < needed:
-        return _response(_wrong(ctx), _usage(600, 40, reasoning_tokens=180))
-    return _response(_correct(ctx), _usage(600, 50, reasoning_tokens=120))
+        return _response(_wrong(ctx), _usage(600, 220, reasoning_tokens=180))
+    return _response(_correct(ctx), _usage(600, 160, reasoning_tokens=120))
 
 
 SCENARIOS = {
@@ -181,6 +186,7 @@ SCENARIOS = {
     "mock-mixed-reasoning": s_mixed_reasoning,
     "mock-empty": s_empty,
     "mock-verbose": s_verbose,
+    "mock-inconsistent-usage": s_inconsistent_usage,
     "mock-fullwidth": s_fullwidth,
     "mock-error": s_error,
     "mock-error-midway": s_error_midway,

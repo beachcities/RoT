@@ -20,6 +20,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+import summarize
+
 BASE_DIR = Path(__file__).resolve().parent
 RESULTS_DIR = BASE_DIR / "results"
 
@@ -144,6 +146,11 @@ def token_breakdown(usage):
             value = details.get("reasoning_tokens")
         if value is not None:
             reasoning = value
+
+    # completion は reasoning を含む。上回っていたら内訳が壊れているので、
+    # 差を出力トークンとして記録せず、取得できなかったものとして扱う。
+    if reasoning is not None and reasoning > completion_tokens:
+        reasoning = None
 
     return {
         "measured": total_tokens > 0,
@@ -352,6 +359,12 @@ def main():
         "tasks": [t["task_id"] for t in tasks],
         "results": results,
     }
+
+    run["summary"] = summarize.summarize(run)
+    print()
+    if args.mock:
+        print("※ --mock 実行。以下はダミー応答に対する集計であり、実測ではありません。")
+    print(summarize.render(run["summary"]))
 
     if not args.no_save:
         RESULTS_DIR.mkdir(exist_ok=True)

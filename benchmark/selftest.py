@@ -12,6 +12,7 @@ import sys
 import traceback
 
 import run_benchmark as rb
+import summarize
 from mock_client import SCENARIOS
 
 CHECKS = []
@@ -111,6 +112,28 @@ def _():
     assert r["total_tokens"] == 1240, r["total_tokens"]
 
 
+@check("reasoning が completion を上回る内訳は取得不能として扱う")
+def _():
+    r = run("mock-inconsistent-usage")
+    assert r["success"] is True
+    assert r["reasoning_tokens"] is None, r["reasoning_tokens"]
+    assert r["output_tokens"] is None, r["output_tokens"]
+    assert r["total_tokens"] == 450, r["total_tokens"]
+
+
+@check("内訳の総和が合う（出力が負にならない）")
+def _():
+    for model in SCENARIOS:
+        for condition in ("raw", "self_descriptive"):
+            r = run(model, condition)
+            if r["output_tokens"] is None:
+                continue
+            assert r["output_tokens"] >= 0, (model, condition, r["output_tokens"])
+            assert r["reasoning_tokens"] + r["output_tokens"] == r["completion_tokens"], (
+                model, condition, r["reasoning_tokens"], r["output_tokens"], r["completion_tokens"]
+            )
+
+
 @check("usage を返さないサーバでは ROT を算出しない")
 def _():
     r = run("mock-no-usage")
@@ -186,6 +209,121 @@ def _():
             assert r["status"] in ("ok", "error"), (model, condition, r["status"])
             assert r["model"] == model and r["condition"] == condition
             assert isinstance(r["attempt_log"], list) and r["attempt_log"]
+
+
+# --- 集計 ----------------------------------------------------------------
+
+
+def fake_row(model, condition, success, total, attempts=1, reasoning=None,
+             status="ok", measured=True):
+    completion = 100
+    return {
+        "model": model,
+        "condition": condition,
+        "task_id": "t",
+        "status": status,
+        "error": None,
+        "success": success,
+        "tokens_measured": measured,
+        "attempts": attempts,
+        "prompt_tokens": total - completion,
+        "reasoning_tokens": reasoning,
+        "output_tokens": None if reasoning is None else completion - reasoning,
+        "completion_tokens": completion,
+        "total_tokens": total,
+        "rot_per_1k": None,
+        "attempt_log": [],
+    }
+
+
+def fake_run(rows):
+    return {"conditions": ["raw", "self_descriptive"], "results": rows}
+
+
+@check("集計: ROT は条件ごとにプールして出す（試行ごとの平均ではない）")
+def _():
+    rows = [
+        fake_row("m", "raw", True, 1000),
+        fake_row("m", "raw", False, 3000),
+    ]
+    stats = summarize.summarize(fake_run(rows))["per_model"]["m"]["per_condition"]["raw"]
+    # 正答1件 / 総4000トークン x 1000 = 0.25。試行ごとの平均なら 0.5 になる。
+    assert stats["rot_per_1k"] == 0.25, stats["rot_per_1k"]
+    assert stats["success_rate"] == 0.5
+
+
+@check("集計: エラー行と未計測行を除外し、除外数を残す")
+def _():
+    rows = [
+        fake_row("m", "raw", True, 1000),
+        fake_row("m", "raw", False, 5000, status="error"),
+        fake_row("m", "raw", True, 0, measured=False),
+    ]
+    summary = summarize.summarize(fake_run(rows))
+    stats = summary["per_model"]["m"]["per_condition"]["raw"]
+    assert stats["trials"] == 3 and stats["used"] == 1 and stats["excluded"] == 2
+    assert stats["total_tokens"] == 1000, stats["total_tokens"]
+    assert summary["excluded_trials"] == 2
+
+
+@check("集計: 内訳が欠けた試行が混ざる条件は CoT を null にする")
+def _():
+    rows = [
+        fake_row("m", "raw", True, 1000, reasoning=40),
+        fake_row("m", "raw", True, 1000, reasoning=None),
+    ]
+    stats = summarize.summarize(fake_run(rows))["per_model"]["m"]["per_condition"]["raw"]
+    assert stats["reasoning_tokens"] is None
+    assert stats["completion_tokens"] == 200
+
+
+@check("集計: 条件比は self_descriptive / raw")
+def _():
+    rows = [
+        fake_row("m", "raw", True, 1000, attempts=2),
+        fake_row("m", "self_descriptive", True, 500, attempts=1),
+    ]
+    c = summarize.summarize(fake_run(rows))["per_model"]["m"]["comparison"]
+    assert c["available"] is True
+    assert c["rot_ratio"] == 2.0, c["rot_ratio"]
+    assert c["total_tokens_ratio"] == 0.5, c["total_tokens_ratio"]
+    assert c["attempts_ratio"] == 0.5, c["attempts_ratio"]
+
+
+@check("集計: 基準条件の正答が0なら ROT の比は出さない")
+def _():
+    rows = [
+        fake_row("m", "raw", False, 1000),
+        fake_row("m", "self_descriptive", True, 1000),
+    ]
+    c = summarize.summarize(fake_run(rows))["per_model"]["m"]["comparison"]
+    assert c["rot_ratio"] is None
+    assert any("定義できない" in n for n in c["notes"])
+    assert any("正答率が条件間で異なる" in n for n in c["notes"])
+
+
+@check("集計: 片側に集計可能な試行が無ければ比を出さない")
+def _():
+    rows = [
+        fake_row("m", "raw", True, 1000),
+        fake_row("m", "self_descriptive", True, 0, measured=False),
+    ]
+    c = summarize.summarize(fake_run(rows))["per_model"]["m"]["comparison"]
+    assert c["available"] is False
+    assert "self_descriptive" in c["notes"][0]
+
+
+@check("集計: render が例外なく文字列を返す")
+def _():
+    rows = [
+        fake_row("a", "raw", True, 1000, reasoning=40),
+        fake_row("a", "self_descriptive", False, 2000, reasoning=None),
+        fake_row("b", "raw", True, 0, measured=False),
+        fake_row("b", "self_descriptive", True, 900, status="error"),
+    ]
+    text = summarize.render(summarize.summarize(fake_run(rows)))
+    assert isinstance(text, str) and "条件比" in text
+    assert "トークナイザ" in text
 
 
 def main():
