@@ -1,0 +1,37 @@
+{
+  "$schema": "https://example.gov/schemas/corp_finance_v1.json",
+  "description": "2024年度 中小企業売上及び活動実態調査データ",
+  "unit_definition": {
+    "fiscal_year_2024_revenue_million_yen": "百万円（税抜）"
+  },
+  "field_definition": {
+    "is_active_entity": "調査基準日時点で事業活動を継続しているか",
+    "industry_code": "日本標準産業分類に準拠した内部コード"
+  },
+  "records": [
+    {
+      "corporate_id": "org_001",
+      "industry_code": 101,
+      "industry_name": "情報通信業",
+      "company_name": "Alpha Inc",
+      "fiscal_year_2024_revenue_million_yen": 1200,
+      "is_active_entity": true
+    },
+    {
+      "corporate_id": "org_002",
+      "industry_code": 102,
+      "industry_name": "製造業",
+      "company_name": "Beta LLC",
+      "fiscal_year_2024_revenue_million_yen": 850,
+      "is_active_entity": false
+    },
+    {
+      "corporate_id": "org_003",
+      "industry_code": 101,
+      "industry_name": "情報通信業",
+      "company_name": "Gamma Co",
+      "fiscal_year_2024_revenue_million_yen": 430,
+      "is_active_entity": false
+    }
+  ]
+}
