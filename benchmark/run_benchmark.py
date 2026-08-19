@@ -8,6 +8,7 @@ context that was missing from the data.
 See README.md for what this does and does not measure.
 """
 
+import argparse
 import json
 import os
 import re
@@ -16,19 +17,28 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from dotenv import load_dotenv
-from openai import OpenAI
-
-load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent
 RESULTS_DIR = BASE_DIR / "results"
+
+load_dotenv(BASE_DIR / ".env")
 
 BASE_URL = os.getenv("BASE_URL", "https://api.openai.com/v1")
 API_KEY = os.getenv("API_KEY") or "dummy"
 MODELS = [m.strip() for m in os.getenv("BENCHMARK_MODELS", "gpt-4o-mini").split(",") if m.strip()]
 MAX_ATTEMPTS = int(os.getenv("MAX_ATTEMPTS", "3"))
 
-client = OpenAI(api_key=API_KEY, base_url=BASE_URL)
+
+
+def build_client(mock=False):
+    """Return the API client. --mock swaps in a stand-in that never uses HTTP."""
+    if mock:
+        from mock_client import MockClient
+
+        return MockClient()
+    from openai import OpenAI
+
+    return OpenAI(api_key=API_KEY, base_url=BASE_URL)
 
 PROMPT_TEMPLATE = """以下のデータを参照して、質問に回答してください。
 
@@ -76,7 +86,7 @@ def token_breakdown(usage):
     return prompt_tokens, reasoning, output_tokens, total_tokens
 
 
-def run_task(model, condition, data, task):
+def run_task(client, model, condition, data, task):
     """Run one task under one condition, retrying until correct or exhausted."""
     messages = [
         {
@@ -151,7 +161,30 @@ def format_cell(value):
     return "n/a" if value is None else str(value)
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="ROT benchmark runner")
+    parser.add_argument(
+        "--mock",
+        action="store_true",
+        help="ダミー応答で全経路を通す（HTTPを叩かない。APIキー不要）",
+    )
+    parser.add_argument("--models", help="カンマ区切りのモデル名（BENCHMARK_MODELS を上書き）")
+    return parser.parse_args()
+
+
 def main():
+    args = parse_args()
+
+    models = MODELS
+    if args.models:
+        models = [m.strip() for m in args.models.split(",") if m.strip()]
+    elif args.mock:
+        from mock_client import DEFAULT_MOCK_MODELS
+
+        models = DEFAULT_MOCK_MODELS
+
+    client = build_client(mock=args.mock)
+
     tasks = load_json("tasks/tasks.json")
     conditions = {
         "raw": load_json("data/raw_dataset.json"),
@@ -159,12 +192,12 @@ def main():
     }
 
     results = []
-    for model in MODELS:
+    for model in models:
         for condition, data in conditions.items():
             for task in tasks:
                 print(f"running: {model} / {condition} / {task['task_id']}")
                 try:
-                    results.append(run_task(model, condition, data, task))
+                    results.append(run_task(client, model, condition, data, task))
                 except Exception as exc:
                     print(f"  failed: {exc}")
                     results.append(
@@ -202,8 +235,9 @@ def main():
         json.dump(
             {
                 "run_at": stamp,
-                "base_url": BASE_URL,
-                "models": MODELS,
+                "base_url": "mock://" if args.mock else BASE_URL,
+                "models": models,
+                "mock": args.mock,
                 "max_attempts": MAX_ATTEMPTS,
                 "results": results,
             },
