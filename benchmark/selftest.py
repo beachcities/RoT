@@ -227,6 +227,70 @@ def _():
             assert isinstance(r["attempt_log"], list) and r["attempt_log"]
 
 
+# --- プロンプト ------------------------------------------------------------
+
+
+def prompt_names():
+    with open(rb.PROMPTS_PATH, encoding="utf-8") as f:
+        return [k for k in json.load(f) if not k.startswith("_")]
+
+
+@check("プロンプト: 全種類が読めて差し込み位置を持つ")
+def _():
+    names = prompt_names()
+    assert len(names) >= 2, names
+    for name in names:
+        p = rb.load_prompts(name)
+        assert "{data}" in p["prompt"] and "{query}" in p["prompt"], name
+        assert p["retry"].strip(), name
+
+
+@check("プロンプト: 存在しない名前を指定したら止まる")
+def _():
+    try:
+        rb.load_prompts("no_such_prompt")
+    except SystemExit as exc:
+        assert "見つかりません" in str(exc), exc
+    else:
+        raise AssertionError("存在しないプロンプトが受理された")
+
+
+@check("プロンプト: 両条件にまったく同じ文面を投げている")
+def _():
+    tasks, conditions = rb.load_suite(SUITE)
+    task = tasks[0]
+    for name in prompt_names():
+        prompts = rb.load_prompts(name)
+        sent = []
+        for condition, data in conditions.items():
+            client = rb.build_client(mock=True)
+            rb.run_task(client, "mock-reasoning", condition, data, task, 1, 1, prompts)
+            sent.append(client.first_messages[0])
+        expected = [
+            prompts["prompt"].format(
+                data=json.dumps(data, ensure_ascii=False, indent=2), query=task["query"]
+            )
+            for data in conditions.values()
+        ]
+        # データ本体以外は一字一句同じであること
+        assert sent == expected, name
+
+
+@check("プロンプト: 投げた全文が結果に残る")
+def _():
+    import contextlib
+    import io
+
+    for name in prompt_names():
+        with contextlib.redirect_stdout(io.StringIO()):
+            run = run_main("--prompt", name, "--models", "mock-reasoning", "--repeats", "1")
+        assert run["prompt_set"] == name, run["prompt_set"]
+        assert run["prompt_text"] == {
+            "prompt": rb.load_prompts(name)["prompt"],
+            "retry": rb.load_prompts(name)["retry"],
+        }, name
+
+
 # --- データとタスクの組 ----------------------------------------------------
 
 

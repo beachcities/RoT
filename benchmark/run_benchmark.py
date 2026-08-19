@@ -54,27 +54,13 @@ MAX_RETRIES = env_int("MAX_RETRIES", 2)
 # どの組を使ったかは結果JSONに残す。組が違えば数値は比較できない。
 SUITE = os.getenv("SUITE", "v2d_tax")
 
-# 「数値のみを出力せよ」と縛ると、モデルは考える過程を書けない。データ側に
-# 欠けた文脈を埋める作業そのものを出力形式で封じることになり、ROT の分母が
-# 測るはずの探索が起きない（実測: raw 側は3案とも正答0で、消費は打ち切り
-# 上限で決まる定数だった）。過程は許し、最終行だけを採点対象にする。
-ANSWER_FORMAT = "考える過程を書いてかまいません。ただし最後の行には、単位や記号を付けず、数値のみを書いてください。"
-
-PROMPT_TEMPLATE = """以下のデータを参照して、質問に回答してください。
-
-### 提供データ
-{data}
-
-### 質問
-{query}
-
-""" + ANSWER_FORMAT
-
-# 「データを読み直して」だと、モデルは同じ読みを繰り返すだけだった（実測: 3回とも
-# 同一の結論）。前提そのものを疑わせる文言に変える。何をどう疑うかは言わない。
-RETRY_TEMPLATE = """その回答は正しくありません。データの各項目が何を表しているかという前提から見直して、もう一度回答してください。
-
-""" + ANSWER_FORMAT
+# プロンプトは prompts.json に外出しした。文言を変えると結果が動くことが実測
+# されている（「数値のみ出力」と縛ると探索が起きず raw は正答0だった、
+# リトライ文言が「読み直して」だと同じ読みを繰り返した）。条件間の差が言い回し
+# に依存していないかを確かめられるよう、言い換えを選べるようにしてある。
+# 投げた全文は結果JSONに残す。
+PROMPTS_PATH = BASE_DIR / "prompts.json"
+PROMPT_SET = os.getenv("PROMPT", "p1_baseline")
 
 # 本文が空で返ったとき、履歴に空文字を積むと拒否するサーバがあるための代替。
 EMPTY_ANSWER_PLACEHOLDER = "(応答なし)"
@@ -102,6 +88,23 @@ def build_client(mock=False):
 def load_json(relative_path):
     with open(BASE_DIR / relative_path, encoding="utf-8") as f:
         return json.load(f)
+
+
+def load_prompts(name):
+    """プロンプト一式を読む。raw / self_descriptive で切り替えることはしない。"""
+    with open(PROMPTS_PATH, encoding="utf-8") as f:
+        sets = json.load(f)
+    available = [k for k in sets if not k.startswith("_")]
+    if name not in available:
+        raise SystemExit(f"プロンプト {name!r} が見つかりません。あるのは: {', '.join(available)}")
+    chosen = sets[name]
+    for key in ("prompt", "retry"):
+        if key not in chosen:
+            raise SystemExit(f"プロンプト {name!r} に {key} がありません")
+    for field in ("{data}", "{query}"):
+        if field not in chosen["prompt"]:
+            raise SystemExit(f"プロンプト {name!r} の prompt に {field} がありません")
+    return chosen
 
 
 def suite_dir(name):
@@ -199,17 +202,18 @@ def token_breakdown(usage):
     }
 
 
-def run_task(client, model, condition, data, task, max_attempts=None, repeat=1):
+def run_task(client, model, condition, data, task, max_attempts=None, repeat=1, prompts=None):
     """1タスクを1条件で1回走らせる。正答するか試行を使い切るまで繰り返す。
 
     ここでいう「試行（attempt）」は同じ会話の中でのリトライ。反復（repeat）は
     会話を捨てて最初からやり直す独立な標本で、呼び出し側が回す。
     """
     max_attempts = MAX_ATTEMPTS if max_attempts is None else max_attempts
+    prompts = load_prompts(PROMPT_SET) if prompts is None else prompts
     messages = [
         {
             "role": "user",
-            "content": PROMPT_TEMPLATE.format(
+            "content": prompts["prompt"].format(
                 data=json.dumps(data, ensure_ascii=False, indent=2),
                 query=task["query"],
             ),
@@ -269,7 +273,7 @@ def run_task(client, model, condition, data, task, max_attempts=None, repeat=1):
             break
 
         messages.append({"role": "assistant", "content": answer or EMPTY_ANSWER_PLACEHOLDER})
-        messages.append({"role": "user", "content": RETRY_TEMPLATE})
+        messages.append({"role": "user", "content": prompts["retry"]})
 
     elapsed = time.time() - started
 
@@ -345,6 +349,7 @@ def parse_args():
     parser.add_argument("--max-attempts", type=int, help="1タスクあたりの最大試行回数を上書き")
     parser.add_argument("--repeats", type=int, help="1セルあたりの反復回数を上書き（REPEATS）")
     parser.add_argument("--suite", help="データとタスクの組（SUITE を上書き。suites/ 配下の名前）")
+    parser.add_argument("--prompt", help="プロンプト一式（PROMPT を上書き。prompts.json のキー）")
     parser.add_argument(
         "--show-trials",
         action="store_true",
@@ -386,9 +391,14 @@ def main():
 
     suite = args.suite or SUITE
     tasks, conditions = load_suite(suite)
+    prompt_set = args.prompt or PROMPT_SET
+    prompts = load_prompts(prompt_set)
 
     cells = len(models) * len(conditions) * len(tasks)
-    print(f"組 {suite}: {cells} セル x 反復 {repeats} 回 = {cells * repeats} 回の実行")
+    print(
+        f"組 {suite} / プロンプト {prompt_set}: "
+        f"{cells} セル x 反復 {repeats} 回 = {cells * repeats} 回の実行"
+    )
 
     results = []
     for model in models:
@@ -400,7 +410,7 @@ def main():
                         f" [{repeat}/{repeats}]"
                     )
                     result = run_task(
-                        client, model, condition, data, task, max_attempts, repeat
+                        client, model, condition, data, task, max_attempts, repeat, prompts
                     )
                     if result["status"] == "error":
                         print(f"  error: {result['error']}")
@@ -422,6 +432,9 @@ def main():
         "base_url": "mock://" if args.mock else BASE_URL,
         "mock": args.mock,
         "suite": suite,
+        "prompt_set": prompt_set,
+        # 投げた全文をそのまま残す。あとから何を投げたか分からない状態にしない。
+        "prompt_text": {"prompt": prompts["prompt"], "retry": prompts["retry"]},
         "models": models,
         "max_attempts": max_attempts,
         "repeats": repeats,

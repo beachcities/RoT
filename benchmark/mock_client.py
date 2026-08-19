@@ -235,6 +235,8 @@ class MockClient:
     def __init__(self):
         self.chat = SimpleNamespace(completions=_Completions(self))
         self.calls = []
+        # 実際に投げられた1通目の本文。プロンプトの検査に使う。
+        self.first_messages = []
         # 反復番号はランナーから渡ってこないので、会話の1通目が来た回数で数える。
         # そうしておけばランナー側にモック専用の受け口を作らずに済む。
         self._repeats = {}
@@ -263,4 +265,6 @@ class MockClient:
             messages=messages,
         )
         self.calls.append((model, condition, ctx.repeat, attempt))
+        if attempt == 1:
+            self.first_messages.append(messages[0]["content"])
         return scenario(ctx)

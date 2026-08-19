@@ -96,6 +96,11 @@ def summarize_condition(rows):
         "total_tokens_dist": distribution([]),
         "attempts_dist": distribution([]),
         "rot_per_trial_dist": distribution([]),
+        # 二山を分けたもの。判定基準は success そのもの（下の注を参照）。
+        "solved_tokens_dist": distribution([]),
+        "unsolved_tokens_dist": distribution([]),
+        "solved_attempts_dist": distribution([]),
+        "unsolved_attempts_dist": distribution([]),
     }
     if not usable:
         return stats
@@ -135,6 +140,21 @@ def summarize_condition(rows):
                     for r in usable
                     if r["total_tokens"]
                 ]
+            ),
+            # 総トークンの分布は二山になる。解けた試行は打ち切りを待たずに終わり、
+            # 解けなかった試行は上限まで使う。混ぜた中央値は両者の混合比で動くので、
+            # 分けたものを併記する。分ける基準は success（正答したか）そのもの。
+            "solved_tokens_dist": distribution(
+                [r["total_tokens"] for r in usable if r["success"]]
+            ),
+            "unsolved_tokens_dist": distribution(
+                [r["total_tokens"] for r in usable if not r["success"]]
+            ),
+            "solved_attempts_dist": distribution(
+                [r["attempts"] for r in usable if r["success"]]
+            ),
+            "unsolved_attempts_dist": distribution(
+                [r["attempts"] for r in usable if not r["success"]]
             ),
         }
     )
@@ -235,6 +255,7 @@ def summarize(run):
         "conditions": conditions,
         "tasks": task_ids,
         "suite": run.get("suite"),
+        "prompt_set": run.get("prompt_set"),
         "repeats": run.get("repeats"),
         "baseline_condition": BASELINE_CONDITION,
         "target_condition": TARGET_CONDITION,
@@ -315,6 +336,16 @@ SPREAD_COLS = [
     ("ROT/1k範囲", 16),
 ]
 
+SPLIT_COLS = [
+    ("condition", 18),
+    ("内訳", 10),
+    ("件数", 6),
+    ("総token中央", 12),
+    ("Q1-Q3", 14),
+    ("最小-最大", 14),
+    ("試行中央", 10),
+]
+
 RATIO_LABELS = [
     ("rot_ratio", "ROT/1k"),
     ("total_tokens_ratio", "総トークン"),
@@ -330,7 +361,10 @@ def render(summary):
     lines.append("=" * 78)
     lines.append("集計（同一モデル内での、データ条件による比較）")
     if summary.get("suite"):
-        lines.append(f"組: {summary['suite']}  （組が違えば数値は比較できない）")
+        label = f"組: {summary['suite']}"
+        if summary.get("prompt_set"):
+            label += f"  /  プロンプト: {summary['prompt_set']}"
+        lines.append(label + "  （どちらかが違えば数値は比較できない）")
     lines.append("=" * 78)
 
     for model, entry in summary["per_model"].items():
@@ -375,6 +409,28 @@ def render(summary):
                 span(rot["min"], rot["max"], 4),
             ]
             lines.append(row(zip(values, widths)))
+
+        lines.append("")
+        lines.append("  解けた試行と解けなかった試行を分けたもの（総トークンは二山になる）")
+        header = row(SPLIT_COLS)
+        lines.append(header)
+        lines.append("-" * display_width(header))
+        widths = [w for _, w in SPLIT_COLS]
+        for condition, st in entry["per_condition"].items():
+            for label, tok_key, att_key in (
+                ("解けた", "solved_tokens_dist", "solved_attempts_dist"),
+                ("解けず", "unsolved_tokens_dist", "unsolved_attempts_dist"),
+            ):
+                tok = st[tok_key]
+                att = st[att_key]
+                if not tok["n"]:
+                    continue
+                lines.append(
+                    row(zip([condition, label, tok["n"], cell(tok["median"], 0),
+                             span(tok["q1"], tok["q3"], 0), span(tok["min"], tok["max"], 0),
+                             "n/a" if att["median"] is None else f"{float(att['median']):.1f}"],
+                            widths))
+                )
 
         comparison = entry.get("comparison")
         if not comparison:
@@ -434,6 +490,9 @@ def render(summary):
     lines.append("  * 自己記述的なデータは記述が増える分だけ入力が長くなる。総トークンの")
     lines.append("    比を見るときは、入力と生成のどちらが動いたのかを分けて見ること。")
     lines.append("  * CoT が n/a のモデルは内訳が取れていない。総量のみの比較になる。")
+    lines.append("  * 二山を分ける基準は success（正答したか）そのもの。解けた試行は打ち切りを")
+    lines.append("    待たずに終わり、解けなかった試行は上限まで使うため、混ぜた中央値は")
+    lines.append("    両者の混合比で動く。混合比は反復ごとに変わる。")
     lines.append("  * ROT/1k はプール算出（正答数 / 総トークン × 1000）。ばらつき表の")
     lines.append("    ROT/1k は反復ごとの値で、解けなかった反復は 0 になるため二山になる。")
     lines.append("    両者は別物として読むこと。")
