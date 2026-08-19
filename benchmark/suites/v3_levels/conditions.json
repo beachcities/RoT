@@ -1,0 +1,124 @@
+{
+  "conditions": [
+    {
+      "name": "l0_opaque",
+      "file": "l0_opaque.json",
+      "level": 0,
+      "placed": {
+        "naming": "opaque",
+        "units": "none",
+        "codes": "none",
+        "flags": "code",
+        "prose": "none"
+      }
+    },
+    {
+      "name": "l1_names",
+      "file": "l1_names.json",
+      "level": 1,
+      "placed": {
+        "naming": "meaningful",
+        "units": "none",
+        "codes": "none",
+        "flags": "code",
+        "prose": "none"
+      }
+    },
+    {
+      "name": "l2_units_ref",
+      "file": "l2_units_ref.json",
+      "level": 2,
+      "placed": {
+        "naming": "meaningful",
+        "units": "external",
+        "codes": "none",
+        "flags": "code",
+        "prose": "none"
+      }
+    },
+    {
+      "name": "l3_units_doc",
+      "file": "l3_units_doc.json",
+      "level": 3,
+      "placed": {
+        "naming": "meaningful",
+        "units": "document",
+        "codes": "none",
+        "flags": "code",
+        "prose": "none"
+      }
+    },
+    {
+      "name": "l4_units_record",
+      "file": "l4_units_record.json",
+      "level": 4,
+      "placed": {
+        "naming": "meaningful",
+        "units": "record",
+        "codes": "none",
+        "flags": "code",
+        "prose": "none"
+      }
+    },
+    {
+      "name": "l5_codes_ref",
+      "file": "l5_codes_ref.json",
+      "level": 5,
+      "placed": {
+        "naming": "meaningful",
+        "units": "record",
+        "codes": "external",
+        "flags": "code",
+        "prose": "none"
+      }
+    },
+    {
+      "name": "l6_codes_doc",
+      "file": "l6_codes_doc.json",
+      "level": 6,
+      "placed": {
+        "naming": "meaningful",
+        "units": "record",
+        "codes": "document",
+        "flags": "code",
+        "prose": "none"
+      }
+    },
+    {
+      "name": "l7_codes_record",
+      "file": "l7_codes_record.json",
+      "level": 7,
+      "placed": {
+        "naming": "meaningful",
+        "units": "record",
+        "codes": "record",
+        "flags": "code",
+        "prose": "none"
+      }
+    },
+    {
+      "name": "l8_flags_record",
+      "file": "l8_flags_record.json",
+      "level": 8,
+      "placed": {
+        "naming": "meaningful",
+        "units": "record",
+        "codes": "record",
+        "flags": "record",
+        "prose": "none"
+      }
+    },
+    {
+      "name": "l9_prose",
+      "file": "l9_prose.json",
+      "level": 9,
+      "placed": {
+        "naming": "meaningful",
+        "units": "record",
+        "codes": "record",
+        "flags": "record",
+        "prose": "document"
+      }
+    }
+  ]
+}

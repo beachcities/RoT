@@ -115,15 +115,29 @@ def suite_dir(name):
     return path
 
 
+# 二値（raw / self_descriptive）の組の既定の中身。conditions.json があればそちらが優先。
+LEGACY_CONDITIONS = [
+    {"name": "raw", "file": "raw_dataset.json"},
+    {"name": "self_descriptive", "file": "self_descriptive_dataset.json"},
+]
+
+
 def load_suite(name):
-    """組を読む。raw / self_descriptive / tasks は必ず同じ世界を指していること。"""
+    """組を読む。データ条件はすべて同じ世界・同じタスクを指していること。
+
+    conditions.json があれば、そこに書かれた順で任意個の条件を読む。各条件に
+    何を置いたか（水準の仕様）も一緒に返し、結果JSONにそのまま残す。
+    """
     path = suite_dir(name)
     tasks = load_json(path / "tasks.json")
-    conditions = {
-        "raw": load_json(path / "raw_dataset.json"),
-        "self_descriptive": load_json(path / "self_descriptive_dataset.json"),
-    }
-    return tasks, conditions
+    manifest_path = path / "conditions.json"
+    spec = load_json(manifest_path)["conditions"] if manifest_path.is_file() else LEGACY_CONDITIONS
+    conditions = {}
+    for entry in spec:
+        if entry["name"] in conditions:
+            raise SystemExit(f"組 {name!r} の条件名が重複しています: {entry['name']}")
+        conditions[entry["name"]] = load_json(path / entry["file"])
+    return tasks, conditions, spec
 
 
 def extract_number(text):
@@ -351,6 +365,10 @@ def parse_args():
     parser.add_argument("--suite", help="データとタスクの組（SUITE を上書き。suites/ 配下の名前）")
     parser.add_argument("--prompt", help="プロンプト一式（PROMPT を上書き。prompts.json のキー）")
     parser.add_argument(
+        "--conditions",
+        help="走らせるデータ条件をカンマ区切りで絞る（既定は組の全条件）",
+    )
+    parser.add_argument(
         "--show-trials",
         action="store_true",
         help="反復1回ごとの明細を表示する（既定は件数が多いと省略。JSONには常に入る）",
@@ -390,9 +408,20 @@ def main():
     client = build_client(mock=args.mock)
 
     suite = args.suite or SUITE
-    tasks, conditions = load_suite(suite)
+    tasks, conditions, condition_spec = load_suite(suite)
     prompt_set = args.prompt or PROMPT_SET
     prompts = load_prompts(prompt_set)
+
+    if args.conditions:
+        wanted = [c.strip() for c in args.conditions.split(",") if c.strip()]
+        unknown = [c for c in wanted if c not in conditions]
+        if unknown:
+            raise SystemExit(
+                f"条件 {', '.join(unknown)} は組 {suite!r} にありません。"
+                f"あるのは: {', '.join(conditions)}"
+            )
+        conditions = {c: conditions[c] for c in wanted}
+        condition_spec = [e for e in condition_spec if e["name"] in conditions]
 
     cells = len(models) * len(conditions) * len(tasks)
     print(
@@ -439,6 +468,8 @@ def main():
         "max_attempts": max_attempts,
         "repeats": repeats,
         "conditions": list(conditions),
+        # 各条件に何を置いたか。機械可読のまま残す。
+        "condition_spec": condition_spec,
         "tasks": [t["task_id"] for t in tasks],
         "results": results,
     }

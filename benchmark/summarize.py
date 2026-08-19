@@ -74,7 +74,7 @@ def ranges_overlap(a, b):
     return a["min"] <= b["max"] and b["min"] <= a["max"]
 
 
-def summarize_condition(rows):
+def summarize_condition(rows, max_attempts=None):
     """1モデル1条件ぶんの行をまとめる。"""
     usable = [r for r in rows if r.get("status") == "ok" and r.get("tokens_measured")]
     excluded = len(rows) - len(usable)
@@ -101,6 +101,9 @@ def summarize_condition(rows):
         "unsolved_tokens_dist": distribution([]),
         "solved_attempts_dist": distribution([]),
         "unsolved_attempts_dist": distribution([]),
+        # 試行回数が上限に張り付いた件数。上限で頭を打っているなら、試行回数は
+        # 連続量として読めない。
+        "at_cap": None,
     }
     if not usable:
         return stats
@@ -149,6 +152,10 @@ def summarize_condition(rows):
             ),
             "unsolved_tokens_dist": distribution(
                 [r["total_tokens"] for r in usable if not r["success"]]
+            ),
+            "at_cap": (
+                None if not max_attempts
+                else sum(1 for r in usable if r["attempts"] >= max_attempts)
             ),
             "solved_attempts_dist": distribution(
                 [r["attempts"] for r in usable if r["success"]]
@@ -239,7 +246,7 @@ def summarize(run):
         by_condition = {}
         for condition in conditions:
             rows = [r for r in results if r["model"] == model and r["condition"] == condition]
-            by_condition[condition] = summarize_condition(rows)
+            by_condition[condition] = summarize_condition(rows, run.get("max_attempts"))
         entry = {"per_condition": by_condition}
         if BASELINE_CONDITION in by_condition and TARGET_CONDITION in by_condition:
             entry["comparison"] = compare(
@@ -256,6 +263,8 @@ def summarize(run):
         "tasks": task_ids,
         "suite": run.get("suite"),
         "prompt_set": run.get("prompt_set"),
+        "max_attempts": run.get("max_attempts"),
+        "condition_spec": run.get("condition_spec"),
         "repeats": run.get("repeats"),
         "baseline_condition": BASELINE_CONDITION,
         "target_condition": TARGET_CONDITION,
@@ -334,6 +343,18 @@ SPREAD_COLS = [
     ("最小-最大", 14),
     ("ROT/1k中央", 12),
     ("ROT/1k範囲", 16),
+]
+
+LEVEL_COLS = [
+    ("水準", 18),
+    ("正答/n", 9),
+    ("総token中央", 12),
+    ("Q1-Q3", 14),
+    ("最小-最大", 14),
+    ("試行中央", 10),
+    ("上限到達", 10),
+    ("ROT/1k", 9),
+    ("中央値比", 10),
 ]
 
 SPLIT_COLS = [
@@ -430,6 +451,38 @@ def render(summary):
                              span(tok["q1"], tok["q3"], 0), span(tok["min"], tok["max"], 0),
                              "n/a" if att["median"] is None else f"{float(att['median']):.1f}"],
                             widths))
+                )
+
+        if len(entry["per_condition"]) > 2:
+            lines.append("")
+            cap = summary.get("max_attempts")
+            lines.append(
+                "  水準ごとの消費（中央値比は先頭の水準を1としたもの"
+                + (f"。上限到達は試行が {cap} 回に達した件数" if cap else "")
+                + "）"
+            )
+            header = row(LEVEL_COLS)
+            lines.append(header)
+            lines.append("-" * display_width(header))
+            widths = [w for _, w in LEVEL_COLS]
+            base = None
+            for condition, st in entry["per_condition"].items():
+                tok = st["total_tokens_dist"]
+                att = st["attempts_dist"]
+                if base is None:
+                    base = tok["median"]
+                lines.append(
+                    row(zip([
+                        condition,
+                        "n/a" if st["successes"] is None else f"{st['successes']}/{st['used']}",
+                        cell(tok["median"], 0),
+                        span(tok["q1"], tok["q3"], 0),
+                        span(tok["min"], tok["max"], 0),
+                        "n/a" if att["median"] is None else f"{float(att['median']):.1f}",
+                        cell(st["at_cap"]),
+                        cell(st["rot_per_1k"], 4),
+                        cell(ratio(tok["median"], base), 3),
+                    ], widths))
                 )
 
         comparison = entry.get("comparison")

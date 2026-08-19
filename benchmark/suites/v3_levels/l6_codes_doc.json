@@ -1,0 +1,64 @@
+{
+  "code_definition": {
+    "101": "情報通信業",
+    "201": "食料品製造業",
+    "202": "金属製品製造業"
+  },
+  "records": [
+    {
+      "corporate_id": "org_001",
+      "industry_code": 101,
+      "company_name": "Alpha Systems",
+      "employee_count_persons": 40,
+      "capital_stock_yen": 90000000,
+      "revenue_2024_million_yen": 1200,
+      "consumption_tax_2024_yen": 120000000,
+      "activity_status": "Y",
+      "closure_date": null
+    },
+    {
+      "corporate_id": "org_002",
+      "industry_code": 201,
+      "company_name": "Beta Foods",
+      "employee_count_persons": 120,
+      "capital_stock_yen": 50000000,
+      "revenue_2024_million_yen": 850,
+      "consumption_tax_2024_yen": 85000000,
+      "activity_status": "N",
+      "closure_date": "2024-11-30"
+    },
+    {
+      "corporate_id": "org_003",
+      "industry_code": 101,
+      "company_name": "Gamma Networks",
+      "employee_count_persons": 15,
+      "capital_stock_yen": 10000000,
+      "revenue_2024_million_yen": 430,
+      "consumption_tax_2024_yen": 43000000,
+      "activity_status": "N",
+      "closure_date": "2024-06-30"
+    },
+    {
+      "corporate_id": "org_004",
+      "industry_code": 202,
+      "company_name": "Delta Metal Works",
+      "employee_count_persons": 310,
+      "capital_stock_yen": 200000000,
+      "revenue_2024_million_yen": 2750,
+      "consumption_tax_2024_yen": 275000000,
+      "activity_status": "Y",
+      "closure_date": null
+    },
+    {
+      "corporate_id": "org_005",
+      "industry_code": 101,
+      "company_name": "Epsilon Data Service",
+      "employee_count_persons": 25,
+      "capital_stock_yen": 30000000,
+      "revenue_2024_million_yen": 660,
+      "consumption_tax_2024_yen": 66000000,
+      "activity_status": "Y",
+      "closure_date": null
+    }
+  ]
+}

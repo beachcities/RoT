@@ -31,7 +31,7 @@ SUITE = rb.SUITE
 
 
 def load(condition, suite=None):
-    tasks, conditions = rb.load_suite(suite or SUITE)
+    tasks, conditions, _ = rb.load_suite(suite or SUITE)
     return tasks, conditions[condition]
 
 
@@ -257,7 +257,7 @@ def _():
 
 @check("プロンプト: 両条件にまったく同じ文面を投げている")
 def _():
-    tasks, conditions = rb.load_suite(SUITE)
+    tasks, conditions, _ = rb.load_suite(SUITE)
     task = tasks[0]
     for name in prompt_names():
         prompts = rb.load_prompts(name)
@@ -303,39 +303,72 @@ def _():
     names = all_suites()
     assert names, "組が1つも無い"
     for name in names:
-        tasks, conditions = rb.load_suite(name)
+        tasks, conditions, _ = rb.load_suite(name)
         assert tasks, name
-        assert set(conditions) == {"raw", "self_descriptive"}, (name, list(conditions))
+        assert len(conditions) >= 2, (name, list(conditions))
 
 
 @check("組: 正答が採点規則で取り出せる形になっている")
 def _():
     for name in all_suites():
-        tasks, _ = rb.load_suite(name)
+        tasks, _, _ = rb.load_suite(name)
         for t in tasks:
             extracted = rb.normalize_truth(t["ground_truth"])
             assert extracted == str(t["ground_truth"]), (name, t["task_id"], extracted)
 
 
-@check("組: 両条件が同じ件数のレコードを指している")
+def records_of(data):
+    return data["records"] if isinstance(data, dict) else data
+
+
+@check("組: すべての条件が同じ件数のレコードを指している")
 def _():
     for name in all_suites():
-        _, conditions = rb.load_suite(name)
-        raw = conditions["raw"]
-        sd = conditions["self_descriptive"]
-        sd_records = sd["records"] if isinstance(sd, dict) else sd
-        assert len(raw) == len(sd_records), (name, len(raw), len(sd_records))
+        _, conditions, _ = rb.load_suite(name)
+        counts = {c: len(records_of(d)) for c, d in conditions.items()}
+        assert len(set(counts.values())) == 1, (name, counts)
 
 
-@check("組: raw 側に単位・業種名・活動状態の語が現れない")
+@check("組: 最下位の条件に単位・業種名・活動状態の語が現れない")
 def _():
     # 明示してしまうと条件の差が消える。禁止語を置いて後退を検出する。
+    # 検査対象は各組の先頭の条件（もっとも自己記述性が低い側）。
     forbidden = ["百万円", "情報通信", "製造業", "unit", "active", "revenue", "industry"]
     for name in all_suites():
-        _, conditions = rb.load_suite(name)
-        text = json.dumps(conditions["raw"], ensure_ascii=False)
+        _, conditions, _ = rb.load_suite(name)
+        first = next(iter(conditions.values()))
+        text = json.dumps(first, ensure_ascii=False)
         for word in forbidden:
             assert word not in text, (name, word)
+
+
+@check("組: 水準の仕様が機械可読に残っている")
+def _():
+    for name in all_suites():
+        _, conditions, spec = rb.load_suite(name)
+        assert [s["name"] for s in spec] == list(conditions), name
+        path = rb.suite_dir(name)
+        if not (path / "conditions.json").is_file():
+            continue
+        # conditions.json のある組は、置いたものを段ごとに書いてあること
+        for entry in spec:
+            assert "placed" in entry, (name, entry["name"])
+            assert (path / entry["file"]).is_file(), (name, entry["file"])
+
+
+@check("組: 3条件以上の組でも集計と描画が通る")
+def _():
+    for name in all_suites():
+        _, conditions, _ = rb.load_suite(name)
+        if len(conditions) <= 2:
+            continue
+        rows = [
+            fake_row(name, condition, success=(i % 2 == 0), total=1000 + 100 * i, attempts=1 + i % 3)
+            for i, condition in enumerate(conditions)
+        ]
+        run = {"results": rows, "conditions": list(conditions), "repeats": 1, "max_attempts": 3}
+        text = summarize.render(summarize.summarize(run))
+        assert isinstance(text, str) and text
 
 
 @check("組: 存在しない組を指定したら止まる")

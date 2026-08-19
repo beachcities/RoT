@@ -1,0 +1,59 @@
+{
+  "records": [
+    {
+      "corporate_id": "org_001",
+      "industry_code": 101,
+      "company_name": "Alpha Systems",
+      "employee_count": 40,
+      "capital_stock": 90000000,
+      "revenue_2024": 1200,
+      "consumption_tax_2024": 120000000,
+      "activity_status": "Y",
+      "closure_date": null
+    },
+    {
+      "corporate_id": "org_002",
+      "industry_code": 201,
+      "company_name": "Beta Foods",
+      "employee_count": 120,
+      "capital_stock": 50000000,
+      "revenue_2024": 850,
+      "consumption_tax_2024": 85000000,
+      "activity_status": "N",
+      "closure_date": "2024-11-30"
+    },
+    {
+      "corporate_id": "org_003",
+      "industry_code": 101,
+      "company_name": "Gamma Networks",
+      "employee_count": 15,
+      "capital_stock": 10000000,
+      "revenue_2024": 430,
+      "consumption_tax_2024": 43000000,
+      "activity_status": "N",
+      "closure_date": "2024-06-30"
+    },
+    {
+      "corporate_id": "org_004",
+      "industry_code": 202,
+      "company_name": "Delta Metal Works",
+      "employee_count": 310,
+      "capital_stock": 200000000,
+      "revenue_2024": 2750,
+      "consumption_tax_2024": 275000000,
+      "activity_status": "Y",
+      "closure_date": null
+    },
+    {
+      "corporate_id": "org_005",
+      "industry_code": 101,
+      "company_name": "Epsilon Data Service",
+      "employee_count": 25,
+      "capital_stock": 30000000,
+      "revenue_2024": 660,
+      "consumption_tax_2024": 66000000,
+      "activity_status": "Y",
+      "closure_date": null
+    }
+  ]
+}
