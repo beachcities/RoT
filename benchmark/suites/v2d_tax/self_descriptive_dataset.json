@@ -1,0 +1,78 @@
+{
+  "$schema": "https://example.gov/schemas/corp_activity_v2.json",
+  "description": "2024年度 企業活動実態調査データ（会計年度 2024-04-01〜2025-03-31）",
+  "unit_definition": {
+    "fiscal_year_2024_revenue_million_yen": "百万円（税抜）",
+    "employee_count": "人",
+    "capital_stock_yen": "円",
+    "fiscal_year_2024_consumption_tax_yen": "円"
+  },
+  "field_definition": {
+    "industry_code": "日本標準産業分類に準拠した内部コード",
+    "industry_name": "industry_code に対応する業種名",
+    "is_active_entity": "調査基準日（2025-03-31）時点で事業活動を継続しているか",
+    "closure_date": "廃業した場合はその日付。活動を継続している場合は null"
+  },
+  "records": [
+    {
+      "corporate_id": "org_001",
+      "industry_code": 101,
+      "industry_name": "情報通信業",
+      "company_name": "Alpha Systems",
+      "employee_count": 40,
+      "capital_stock_yen": 90000000,
+      "fiscal_year_2024_revenue_million_yen": 1200,
+      "fiscal_year_2024_consumption_tax_yen": 120000000,
+      "is_active_entity": true,
+      "closure_date": null
+    },
+    {
+      "corporate_id": "org_002",
+      "industry_code": 201,
+      "industry_name": "食料品製造業",
+      "company_name": "Beta Foods",
+      "employee_count": 120,
+      "capital_stock_yen": 50000000,
+      "fiscal_year_2024_revenue_million_yen": 850,
+      "fiscal_year_2024_consumption_tax_yen": 85000000,
+      "is_active_entity": false,
+      "closure_date": "2024-11-30"
+    },
+    {
+      "corporate_id": "org_003",
+      "industry_code": 101,
+      "industry_name": "情報通信業",
+      "company_name": "Gamma Networks",
+      "employee_count": 15,
+      "capital_stock_yen": 10000000,
+      "fiscal_year_2024_revenue_million_yen": 430,
+      "fiscal_year_2024_consumption_tax_yen": 43000000,
+      "is_active_entity": false,
+      "closure_date": "2024-06-30"
+    },
+    {
+      "corporate_id": "org_004",
+      "industry_code": 202,
+      "industry_name": "金属製品製造業",
+      "company_name": "Delta Metal Works",
+      "employee_count": 310,
+      "capital_stock_yen": 200000000,
+      "fiscal_year_2024_revenue_million_yen": 2750,
+      "fiscal_year_2024_consumption_tax_yen": 275000000,
+      "is_active_entity": true,
+      "closure_date": null
+    },
+    {
+      "corporate_id": "org_005",
+      "industry_code": 101,
+      "industry_name": "情報通信業",
+      "company_name": "Epsilon Data Service",
+      "employee_count": 25,
+      "capital_stock_yen": 30000000,
+      "fiscal_year_2024_revenue_million_yen": 660,
+      "fiscal_year_2024_consumption_tax_yen": 66000000,
+      "is_active_entity": true,
+      "closure_date": null
+    }
+  ]
+}

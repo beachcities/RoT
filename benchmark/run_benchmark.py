@@ -24,6 +24,7 @@ import summarize
 
 BASE_DIR = Path(__file__).resolve().parent
 RESULTS_DIR = BASE_DIR / "results"
+SUITES_DIR = BASE_DIR / "suites"
 
 # .env はこのファイルの隣を見る。リポジトリ直下から起動されても拾えるように。
 load_dotenv(BASE_DIR / ".env")
@@ -49,6 +50,15 @@ MAX_ATTEMPTS = env_int("MAX_ATTEMPTS", 3)
 REPEATS = env_int("REPEATS", 5)
 REQUEST_TIMEOUT = env_int("REQUEST_TIMEOUT", 120)
 MAX_RETRIES = env_int("MAX_RETRIES", 2)
+# データとタスクの組。組ごとに raw / self_descriptive / tasks が揃っている。
+# どの組を使ったかは結果JSONに残す。組が違えば数値は比較できない。
+SUITE = os.getenv("SUITE", "v2d_tax")
+
+# 「数値のみを出力せよ」と縛ると、モデルは考える過程を書けない。データ側に
+# 欠けた文脈を埋める作業そのものを出力形式で封じることになり、ROT の分母が
+# 測るはずの探索が起きない（実測: raw 側は3案とも正答0で、消費は打ち切り
+# 上限で決まる定数だった）。過程は許し、最終行だけを採点対象にする。
+ANSWER_FORMAT = "考える過程を書いてかまいません。ただし最後の行には、単位や記号を付けず、数値のみを書いてください。"
 
 PROMPT_TEMPLATE = """以下のデータを参照して、質問に回答してください。
 
@@ -58,11 +68,13 @@ PROMPT_TEMPLATE = """以下のデータを参照して、質問に回答して�
 ### 質問
 {query}
 
-数値のみを、単位や記号を付けずに出力してください。"""
+""" + ANSWER_FORMAT
 
-RETRY_TEMPLATE = """その回答は正しくありません。データを読み直して、もう一度回答してください。
+# 「データを読み直して」だと、モデルは同じ読みを繰り返すだけだった（実測: 3回とも
+# 同一の結論）。前提そのものを疑わせる文言に変える。何をどう疑うかは言わない。
+RETRY_TEMPLATE = """その回答は正しくありません。データの各項目が何を表しているかという前提から見直して、もう一度回答してください。
 
-数値のみを、単位や記号を付けずに出力してください。"""
+""" + ANSWER_FORMAT
 
 # 本文が空で返ったとき、履歴に空文字を積むと拒否するサーバがあるための代替。
 EMPTY_ANSWER_PLACEHOLDER = "(応答なし)"
@@ -90,6 +102,25 @@ def build_client(mock=False):
 def load_json(relative_path):
     with open(BASE_DIR / relative_path, encoding="utf-8") as f:
         return json.load(f)
+
+
+def suite_dir(name):
+    path = SUITES_DIR / name
+    if not path.is_dir():
+        available = ", ".join(sorted(p.name for p in SUITES_DIR.iterdir() if p.is_dir()))
+        raise SystemExit(f"組 {name!r} が見つかりません。あるのは: {available}")
+    return path
+
+
+def load_suite(name):
+    """組を読む。raw / self_descriptive / tasks は必ず同じ世界を指していること。"""
+    path = suite_dir(name)
+    tasks = load_json(path / "tasks.json")
+    conditions = {
+        "raw": load_json(path / "raw_dataset.json"),
+        "self_descriptive": load_json(path / "self_descriptive_dataset.json"),
+    }
+    return tasks, conditions
 
 
 def extract_number(text):
@@ -313,6 +344,7 @@ def parse_args():
     parser.add_argument("--models", help="カンマ区切りのモデル名（BENCHMARK_MODELS を上書き）")
     parser.add_argument("--max-attempts", type=int, help="1タスクあたりの最大試行回数を上書き")
     parser.add_argument("--repeats", type=int, help="1セルあたりの反復回数を上書き（REPEATS）")
+    parser.add_argument("--suite", help="データとタスクの組（SUITE を上書き。suites/ 配下の名前）")
     parser.add_argument(
         "--show-trials",
         action="store_true",
@@ -352,14 +384,11 @@ def main():
         raise SystemExit("--repeats / REPEATS は1以上である必要があります")
     client = build_client(mock=args.mock)
 
-    tasks = load_json("tasks/tasks.json")
-    conditions = {
-        "raw": load_json("data/raw_dataset.json"),
-        "self_descriptive": load_json("data/self_descriptive_dataset.json"),
-    }
+    suite = args.suite or SUITE
+    tasks, conditions = load_suite(suite)
 
     cells = len(models) * len(conditions) * len(tasks)
-    print(f"{cells} セル x 反復 {repeats} 回 = {cells * repeats} 回の実行")
+    print(f"組 {suite}: {cells} セル x 反復 {repeats} 回 = {cells * repeats} 回の実行")
 
     results = []
     for model in models:
@@ -392,6 +421,7 @@ def main():
         "run_at": datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ"),
         "base_url": "mock://" if args.mock else BASE_URL,
         "mock": args.mock,
+        "suite": suite,
         "models": models,
         "max_attempts": max_attempts,
         "repeats": repeats,

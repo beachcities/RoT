@@ -1,0 +1,62 @@
+[
+  {
+    "id": "org_001",
+    "cd": 101,
+    "nm": "Alpha Systems",
+    "emp": 40,
+    "cap": 90000000,
+    "val_24": 1200,
+    "flg": "Y",
+    "end_dt": null
+  },
+  {
+    "id": "org_002",
+    "cd": 201,
+    "nm": "Beta Foods",
+    "emp": 120,
+    "cap": 50000000,
+    "val_24": 850,
+    "flg": "N",
+    "end_dt": "2024-11-30"
+  },
+  {
+    "id": "org_003",
+    "cd": 101,
+    "nm": "Gamma Networks",
+    "emp": 15,
+    "cap": 10000000,
+    "val_24": 430,
+    "flg": "N",
+    "end_dt": "2024-06-30"
+  },
+  {
+    "id": "org_004",
+    "cd": 202,
+    "nm": "Delta Metal Works",
+    "emp": 310,
+    "cap": 200000000,
+    "val_24": 2750,
+    "flg": "Y",
+    "end_dt": null
+  },
+  {
+    "id": "org_005",
+    "cd": 101,
+    "nm": "Epsilon Data Service",
+    "emp": 25,
+    "cap": 30000000,
+    "val_24": 660,
+    "flg": "Y",
+    "end_dt": null
+  },
+  {
+    "id": "org_100",
+    "cd": 203,
+    "nm": "トヨタ自動車",
+    "emp": 380793,
+    "cap": 635401000000,
+    "val_24": 45095300,
+    "flg": "Y",
+    "end_dt": null
+  }
+]

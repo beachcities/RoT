@@ -8,6 +8,7 @@
 モックの応答はデータ条件を見ないので、この結果から仮説の当否は何も言えない。
 """
 
+import json
 import sys
 import traceback
 
@@ -26,23 +27,25 @@ def check(name):
     return decorator
 
 
-def run(model, condition="raw", max_attempts=3):
+SUITE = rb.SUITE
+
+
+def load(condition, suite=None):
+    tasks, conditions = rb.load_suite(suite or SUITE)
+    return tasks, conditions[condition]
+
+
+def run(model, condition="raw", max_attempts=3, suite=None):
     """モックで1セル走らせて結果行を返す。"""
     client = rb.build_client(mock=True)
-    tasks = rb.load_json("tasks/tasks.json")
-    data = rb.load_json(
-        "data/raw_dataset.json" if condition == "raw" else "data/self_descriptive_dataset.json"
-    )
+    tasks, data = load(condition, suite)
     return rb.run_task(client, model, condition, data, tasks[0], max_attempts)
 
 
-def run_repeats(model, condition="raw", repeats=5, max_attempts=3):
+def run_repeats(model, condition="raw", repeats=5, max_attempts=3, suite=None):
     """同じクライアントで反復させる。ランナーの反復ループと同じ形。"""
     client = rb.build_client(mock=True)
-    tasks = rb.load_json("tasks/tasks.json")
-    data = rb.load_json(
-        "data/raw_dataset.json" if condition == "raw" else "data/self_descriptive_dataset.json"
-    )
+    tasks, data = load(condition, suite)
     return [
         rb.run_task(client, model, condition, data, tasks[0], max_attempts, repeat)
         for repeat in range(1, repeats + 1)
@@ -222,6 +225,63 @@ def _():
             assert r["status"] in ("ok", "error"), (model, condition, r["status"])
             assert r["model"] == model and r["condition"] == condition
             assert isinstance(r["attempt_log"], list) and r["attempt_log"]
+
+
+# --- データとタスクの組 ----------------------------------------------------
+
+
+def all_suites():
+    return sorted(d.name for d in (rb.SUITES_DIR).iterdir() if d.is_dir())
+
+
+@check("組: suites/ 配下がすべて読める")
+def _():
+    names = all_suites()
+    assert names, "組が1つも無い"
+    for name in names:
+        tasks, conditions = rb.load_suite(name)
+        assert tasks, name
+        assert set(conditions) == {"raw", "self_descriptive"}, (name, list(conditions))
+
+
+@check("組: 正答が採点規則で取り出せる形になっている")
+def _():
+    for name in all_suites():
+        tasks, _ = rb.load_suite(name)
+        for t in tasks:
+            extracted = rb.normalize_truth(t["ground_truth"])
+            assert extracted == str(t["ground_truth"]), (name, t["task_id"], extracted)
+
+
+@check("組: 両条件が同じ件数のレコードを指している")
+def _():
+    for name in all_suites():
+        _, conditions = rb.load_suite(name)
+        raw = conditions["raw"]
+        sd = conditions["self_descriptive"]
+        sd_records = sd["records"] if isinstance(sd, dict) else sd
+        assert len(raw) == len(sd_records), (name, len(raw), len(sd_records))
+
+
+@check("組: raw 側に単位・業種名・活動状態の語が現れない")
+def _():
+    # 明示してしまうと条件の差が消える。禁止語を置いて後退を検出する。
+    forbidden = ["百万円", "情報通信", "製造業", "unit", "active", "revenue", "industry"]
+    for name in all_suites():
+        _, conditions = rb.load_suite(name)
+        text = json.dumps(conditions["raw"], ensure_ascii=False)
+        for word in forbidden:
+            assert word not in text, (name, word)
+
+
+@check("組: 存在しない組を指定したら止まる")
+def _():
+    try:
+        rb.load_suite("no_such_suite")
+    except SystemExit as exc:
+        assert "見つかりません" in str(exc), exc
+    else:
+        raise AssertionError("存在しない組が受理された")
 
 
 # --- 反復 ----------------------------------------------------------------

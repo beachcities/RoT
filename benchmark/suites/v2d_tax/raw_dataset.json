@@ -1,0 +1,57 @@
+[
+  {
+    "id": "org_001",
+    "cd": 101,
+    "nm": "Alpha Systems",
+    "emp": 40,
+    "cap": 90000000,
+    "val_24": 1200,
+    "tax_24": 120000000,
+    "flg": "Y",
+    "end_dt": null
+  },
+  {
+    "id": "org_002",
+    "cd": 201,
+    "nm": "Beta Foods",
+    "emp": 120,
+    "cap": 50000000,
+    "val_24": 850,
+    "tax_24": 85000000,
+    "flg": "N",
+    "end_dt": "2024-11-30"
+  },
+  {
+    "id": "org_003",
+    "cd": 101,
+    "nm": "Gamma Networks",
+    "emp": 15,
+    "cap": 10000000,
+    "val_24": 430,
+    "tax_24": 43000000,
+    "flg": "N",
+    "end_dt": "2024-06-30"
+  },
+  {
+    "id": "org_004",
+    "cd": 202,
+    "nm": "Delta Metal Works",
+    "emp": 310,
+    "cap": 200000000,
+    "val_24": 2750,
+    "tax_24": 275000000,
+    "flg": "Y",
+    "end_dt": null
+  },
+  {
+    "id": "org_005",
+    "cd": 101,
+    "nm": "Epsilon Data Service",
+    "emp": 25,
+    "cap": 30000000,
+    "val_24": 660,
+    "tax_24": 66000000,
+    "flg": "Y",
+    "end_dt": null
+  }
+]

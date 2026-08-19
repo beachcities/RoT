@@ -54,12 +54,16 @@ def _response(content, usage):
 
 
 def _load_ground_truth(first_user_message):
-    """プロンプトに埋まっている query から、そのタスクの正答を引く。"""
-    with open(BASE_DIR / "tasks" / "tasks.json", encoding="utf-8") as f:
-        tasks = json.load(f)
-    for task in tasks:
-        if task["query"] in first_user_message:
-            return task["ground_truth"]
+    """プロンプトに埋まっている query から、そのタスクの正答を引く。
+
+    どの組（suite）で走っているかはモック側に渡ってこないので、全部の組の
+    tasks.json を舐めて query 文字列で突き合わせる。
+    """
+    for path in sorted((BASE_DIR / "suites").glob("*/tasks.json")):
+        with open(path, encoding="utf-8") as f:
+            for task in json.load(f):
+                if task["query"] in first_user_message:
+                    return task["ground_truth"]
     return None
 
 

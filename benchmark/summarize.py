@@ -234,6 +234,7 @@ def summarize(run):
         "models": models,
         "conditions": conditions,
         "tasks": task_ids,
+        "suite": run.get("suite"),
         "repeats": run.get("repeats"),
         "baseline_condition": BASELINE_CONDITION,
         "target_condition": TARGET_CONDITION,
@@ -328,6 +329,8 @@ def render(summary):
     lines = []
     lines.append("=" * 78)
     lines.append("集計（同一モデル内での、データ条件による比較）")
+    if summary.get("suite"):
+        lines.append(f"組: {summary['suite']}  （組が違えば数値は比較できない）")
     lines.append("=" * 78)
 
     for model, entry in summary["per_model"].items():
