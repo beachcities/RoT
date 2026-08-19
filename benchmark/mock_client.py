@@ -163,6 +163,25 @@ def s_error_midway(ctx):
     raise MockAPIError("mock: 429 rate limit exceeded")
 
 
+def s_noisy(ctx):
+    """反復ごとに消費が揺れるモデル。ばらつきの表示を確かめるためのもの。
+
+    揺れ幅は任意の固定値。データ条件では変えていない。
+    """
+    jitter = (0, 90, -40, 150, -20)[(ctx.repeat - 1) % 5]
+    return _response(_correct(ctx), _usage(420, 260 + jitter, reasoning_tokens=200 + jitter))
+
+
+def s_flaky(ctx):
+    """反復のうち何回かだけ解けるモデル。正答数 n/N の表示を確かめる。
+
+    奇数回目だけ解ける。データ条件では変えていない。
+    """
+    if ctx.repeat % 2 == 1:
+        return _response(_correct(ctx), _usage(420, 200, reasoning_tokens=150))
+    return _response(_wrong(ctx), _usage(420 + 40 * ctx.attempt, 180, reasoning_tokens=150))
+
+
 def s_varied(ctx):
     """データ条件で試行回数が変わるフィクスチャ。集計表の書式確認用。
 
@@ -190,6 +209,8 @@ SCENARIOS = {
     "mock-fullwidth": s_fullwidth,
     "mock-error": s_error,
     "mock-error-midway": s_error_midway,
+    "mock-noisy": s_noisy,
+    "mock-flaky": s_flaky,
     "mock-varied": s_varied,
 }
 
@@ -210,6 +231,9 @@ class MockClient:
     def __init__(self):
         self.chat = SimpleNamespace(completions=_Completions(self))
         self.calls = []
+        # 反復番号はランナーから渡ってこないので、会話の1通目が来た回数で数える。
+        # そうしておけばランナー側にモック専用の受け口を作らずに済む。
+        self._repeats = {}
 
     def _create(self, model, messages, kwargs):
         scenario = SCENARIOS.get(model)
@@ -221,12 +245,18 @@ class MockClient:
 
         user_messages = [m for m in messages if m.get("role") == "user"]
         first = user_messages[0]["content"] if user_messages else ""
+        attempt = len(user_messages)
+        condition = _detect_condition(first)
+        key = (model, condition)
+        if attempt == 1:
+            self._repeats[key] = self._repeats.get(key, 0) + 1
         ctx = SimpleNamespace(
             model=model,
-            attempt=len(user_messages),
-            condition=_detect_condition(first),
+            attempt=attempt,
+            repeat=self._repeats.get(key, 1),
+            condition=condition,
             truth=_load_ground_truth(first),
             messages=messages,
         )
-        self.calls.append((model, ctx.condition, ctx.attempt))
+        self.calls.append((model, condition, ctx.repeat, attempt))
         return scenario(ctx)

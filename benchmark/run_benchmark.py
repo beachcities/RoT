@@ -43,6 +43,10 @@ BASE_URL = os.getenv("BASE_URL", "https://api.openai.com/v1")
 API_KEY = os.getenv("API_KEY") or "dummy"
 MODELS = [m.strip() for m in os.getenv("BENCHMARK_MODELS", "gpt-4o-mini").split(",") if m.strip()]
 MAX_ATTEMPTS = env_int("MAX_ATTEMPTS", 3)
+# 1セル（モデル×条件×タスク）を何回繰り返すか。条件間に差が出たとき、それが
+# ばらつきの範囲かを言うために要る。5 は暫定値であって確定した設計ではない。
+# README の「反復回数について」を参照。
+REPEATS = env_int("REPEATS", 5)
 REQUEST_TIMEOUT = env_int("REQUEST_TIMEOUT", 120)
 MAX_RETRIES = env_int("MAX_RETRIES", 2)
 
@@ -62,6 +66,9 @@ RETRY_TEMPLATE = """その回答は正しくありません。データを読み
 
 # 本文が空で返ったとき、履歴に空文字を積むと拒否するサーバがあるための代替。
 EMPTY_ANSWER_PLACEHOLDER = "(応答なし)"
+
+# 反復ごとの明細をそのまま並べると読めなくなるので、この件数を超えたら省略する。
+TRIAL_TABLE_LIMIT = 30
 
 
 def build_client(mock=False):
@@ -161,8 +168,12 @@ def token_breakdown(usage):
     }
 
 
-def run_task(client, model, condition, data, task, max_attempts=None):
-    """1タスクを1条件で走らせる。正答するか試行を使い切るまで繰り返す。"""
+def run_task(client, model, condition, data, task, max_attempts=None, repeat=1):
+    """1タスクを1条件で1回走らせる。正答するか試行を使い切るまで繰り返す。
+
+    ここでいう「試行（attempt）」は同じ会話の中でのリトライ。反復（repeat）は
+    会話を捨てて最初からやり直す独立な標本で、呼び出し側が回す。
+    """
     max_attempts = MAX_ATTEMPTS if max_attempts is None else max_attempts
     messages = [
         {
@@ -247,6 +258,7 @@ def run_task(client, model, condition, data, task, max_attempts=None):
         "model": model,
         "condition": condition,
         "task_id": task["task_id"],
+        "repeat": repeat,
         "status": status,
         "error": error,
         "success": success,
@@ -277,15 +289,15 @@ def trial_state(result):
 
 
 def print_trial_table(results):
-    cols = [("model", 24), ("condition", 18), ("task", 10), ("state", 9),
-            ("try", 5), ("CoT", 8), ("total", 8), ("ROT/1k", 9)]
+    cols = [("model", 24), ("condition", 18), ("task", 10), ("rep", 5),
+            ("state", 9), ("try", 5), ("CoT", 8), ("total", 8), ("ROT/1k", 9)]
     header = "".join(f"{name:<{width}}" for name, width in cols)
     print(header)
     print("-" * len(header))
     for r in results:
         print(
             f"{r['model']:<24}{r['condition']:<18}{r['task_id']:<10}"
-            f"{trial_state(r):<9}{r['attempts']:<5}"
+            f"{r.get('repeat', 1):<5}{trial_state(r):<9}{r['attempts']:<5}"
             f"{format_cell(r['reasoning_tokens']):<8}{r['total_tokens']:<8}"
             f"{format_cell(r['rot_per_1k']):<9}"
         )
@@ -300,6 +312,12 @@ def parse_args():
     )
     parser.add_argument("--models", help="カンマ区切りのモデル名（BENCHMARK_MODELS を上書き）")
     parser.add_argument("--max-attempts", type=int, help="1タスクあたりの最大試行回数を上書き")
+    parser.add_argument("--repeats", type=int, help="1セルあたりの反復回数を上書き（REPEATS）")
+    parser.add_argument(
+        "--show-trials",
+        action="store_true",
+        help="反復1回ごとの明細を表示する（既定は件数が多いと省略。JSONには常に入る）",
+    )
     parser.add_argument("--no-save", action="store_true", help="results/ に書き出さない")
     return parser.parse_args()
 
@@ -326,6 +344,9 @@ def main():
         models = DEFAULT_MOCK_MODELS
 
     max_attempts = args.max_attempts or MAX_ATTEMPTS
+    repeats = args.repeats or REPEATS
+    if repeats < 1:
+        raise SystemExit("--repeats / REPEATS は1以上である必要があります")
     client = build_client(mock=args.mock)
 
     tasks = load_json("tasks/tasks.json")
@@ -334,20 +355,35 @@ def main():
         "self_descriptive": load_json("data/self_descriptive_dataset.json"),
     }
 
+    cells = len(models) * len(conditions) * len(tasks)
+    print(f"{cells} セル x 反復 {repeats} 回 = {cells * repeats} 回の実行")
+
     results = []
     for model in models:
         for condition, data in conditions.items():
             for task in tasks:
-                print(f"running: {model} / {condition} / {task['task_id']}")
-                result = run_task(client, model, condition, data, task, max_attempts)
-                if result["status"] == "error":
-                    print(f"  error: {result['error']}")
-                elif not result["tokens_measured"]:
-                    print("  warning: usage が返らないためトークンを計測できていません")
-                results.append(result)
+                for repeat in range(1, repeats + 1):
+                    print(
+                        f"running: {model} / {condition} / {task['task_id']}"
+                        f" [{repeat}/{repeats}]"
+                    )
+                    result = run_task(
+                        client, model, condition, data, task, max_attempts, repeat
+                    )
+                    if result["status"] == "error":
+                        print(f"  error: {result['error']}")
+                    elif not result["tokens_measured"]:
+                        print("  warning: usage が返らないためトークンを計測できていません")
+                    results.append(result)
 
     print()
-    print_trial_table(results)
+    if args.show_trials or len(results) <= TRIAL_TABLE_LIMIT:
+        print_trial_table(results)
+    else:
+        print(
+            f"反復ごとの明細 {len(results)} 件は省略した（--show-trials で表示）。"
+            "JSONには常に入っている。"
+        )
 
     run = {
         "run_at": datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ"),
@@ -355,6 +391,7 @@ def main():
         "mock": args.mock,
         "models": models,
         "max_attempts": max_attempts,
+        "repeats": repeats,
         "conditions": list(conditions),
         "tasks": [t["task_id"] for t in tasks],
         "results": results,

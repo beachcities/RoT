@@ -36,6 +36,19 @@ def run(model, condition="raw", max_attempts=3):
     return rb.run_task(client, model, condition, data, tasks[0], max_attempts)
 
 
+def run_repeats(model, condition="raw", repeats=5, max_attempts=3):
+    """同じクライアントで反復させる。ランナーの反復ループと同じ形。"""
+    client = rb.build_client(mock=True)
+    tasks = rb.load_json("tasks/tasks.json")
+    data = rb.load_json(
+        "data/raw_dataset.json" if condition == "raw" else "data/self_descriptive_dataset.json"
+    )
+    return [
+        rb.run_task(client, model, condition, data, tasks[0], max_attempts, repeat)
+        for repeat in range(1, repeats + 1)
+    ]
+
+
 # --- 採点規則 ------------------------------------------------------------
 
 
@@ -209,6 +222,34 @@ def _():
             assert r["status"] in ("ok", "error"), (model, condition, r["status"])
             assert r["model"] == model and r["condition"] == condition
             assert isinstance(r["attempt_log"], list) and r["attempt_log"]
+
+
+# --- 反復 ----------------------------------------------------------------
+
+
+@check("反復: 反復番号が行に残る")
+def _():
+    rows = run_repeats("mock-reasoning", repeats=3)
+    assert [r["repeat"] for r in rows] == [1, 2, 3]
+
+
+@check("反復: 既定値は5")
+def _():
+    assert rb.REPEATS == 5, rb.REPEATS
+
+
+@check("反復: 反復ごとに消費が揺れる経路を踏める")
+def _():
+    rows = run_repeats("mock-noisy", repeats=5)
+    totals = [r["total_tokens"] for r in rows]
+    assert len(set(totals)) > 1, totals
+    assert all(r["success"] for r in rows)
+
+
+@check("反復: 5回中3回だけ解ける経路を踏める")
+def _():
+    rows = run_repeats("mock-flaky", repeats=5)
+    assert sum(1 for r in rows if r["success"]) == 3, [r["success"] for r in rows]
 
 
 # --- 集計 ----------------------------------------------------------------
