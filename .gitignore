@@ -1,0 +1,24 @@
+# 実行結果（生成物。実測値はリポジトリに含めない）
+benchmark/results/
+results/
+
+# 認証情報
+.env
+*.env
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+
+# エディタ / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
