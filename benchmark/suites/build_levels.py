@@ -34,11 +34,46 @@ CORE = [
     dict(id="org_003", cd=101, nm="Gamma Networks",       ind="情報通信業",     emp=15,  cap=10_000_000,  val=430,  end="2024-06-30"),
     dict(id="org_004", cd=202, nm="Delta Metal Works",    ind="金属製品製造業", emp=310, cap=200_000_000, val=2750, end=None),
     dict(id="org_005", cd=101, nm="Epsilon Data Service", ind="情報通信業",     emp=25,  cap=30_000_000,  val=660,  end=None),
+    # 社名から業種が推せない1件。cd=303 の意味は、書いてある段でしか分からない。
+    dict(id="org_006", cd=303, nm="Zeta Holdings",        ind="専門サービス業", emp=55,  cap=20_000_000,  val=910,  end=None),
 ]
 
-CODE_NAMES = {101: "情報通信業", 201: "食料品製造業", 202: "金属製品製造業"}
+CODE_NAMES = {101: "情報通信業", 201: "食料品製造業", 202: "金属製品製造業", 303: "専門サービス業"}
 
-TASKS = json.loads((BASE / "v2d_tax" / "tasks.json").read_text(encoding="utf-8"))
+UNIT_SUFFIX = "単位を「円」に換算し、数値のみを答えてください。"
+COUNT_SUFFIX = "数値のみを答えてください。"
+
+# タスクは2群ある。
+#   単位群（task_01〜03）: 正答に単位（百万円）の解決が要る。
+#   非単位群（task_04〜06）: 従業員数を数えるだけで、単位の換算は要らない。
+#     そのかわり、業種コードや活動フラグの意味が要る。上位段に境界が出るかを
+#     見るためのもの。単位を同時に要求すると l2/l3 の境界に埋もれる。
+TASKS = [
+    dict(task_id="task_01", group="unit",
+         query="情報通信業に属し、かつ現在も活動中の企業について、2024年度の売上高の合計は何円ですか。" + UNIT_SUFFIX,
+         ground_truth="1860000000",
+         needs="単位。業種は社名から推せる"),
+    dict(task_id="task_02", group="unit",
+         query="金属製品製造業に属し、かつ現在も活動中の企業について、2024年度の売上高は何円ですか。" + UNIT_SUFFIX,
+         ground_truth="2750000000",
+         needs="単位。業種は社名から推せる"),
+    dict(task_id="task_03", group="unit",
+         query="食料品製造業に属する企業について、2024年度の売上高は何円ですか。" + UNIT_SUFFIX,
+         ground_truth="850000000",
+         needs="単位。業種は社名から推せる"),
+    dict(task_id="task_04", group="code_guessable",
+         query="情報通信業に属する企業について、従業員数の合計は何人ですか。" + COUNT_SUFFIX,
+         ground_truth="80",
+         needs="業種コードの意味。ただし社名（Systems / Networks / Data Service）から推せる"),
+    dict(task_id="task_05", group="flag",
+         query="現在も活動を継続している企業について、従業員数の合計は何人ですか。" + COUNT_SUFFIX,
+         ground_truth="430",
+         needs="列挙値の意味（活動状態）。ただし廃業日の有無からも推せる"),
+    dict(task_id="task_06", group="code_opaque",
+         query="専門サービス業に属する企業について、従業員数は何人ですか。" + COUNT_SUFFIX,
+         ground_truth="55",
+         needs="業種コード 303 の意味。社名 Zeta Holdings からは推せないので、書いてある段でしか解けない"),
+]
 
 # 段の定義。値がそのまま conditions.json に入り、結果JSONにも残る。
 #   naming    : opaque    項目名が意味を持たない / meaningful 意味のある語

@@ -30,14 +30,19 @@ def latest_result_file():
     return files[-1]
 
 
-def collect(run, model):
-    """条件ごとに、集計対象になった試行の総トークンと試行回数を集める。"""
+def collect(run, model, task=None):
+    """条件ごとに、集計対象になった試行の総トークンと試行回数を集める。
+
+    task を指定すると、そのタスクだけを見る。難度の違うタスクを混ぜると、
+    水準ごとの中央値がタスクの混合比で動いてしまう。
+    """
     out = []
     for condition in run["conditions"]:
         rows = [
             r for r in run["results"]
             if r["model"] == model and r["condition"] == condition
             and r["status"] == "ok" and r["tokens_measured"]
+            and (task is None or r["task_id"] == task)
         ]
         out.append({
             "name": condition,
@@ -61,8 +66,8 @@ def quantiles(values):
     return q(0.25), q(0.5), q(0.75)
 
 
-def draw(run, model, out_path):
-    data = collect(run, model)
+def draw(run, model, out_path, task=None):
+    data = collect(run, model, task)
     x = list(range(len(data)))
     labels = [d["name"] for d in data]
 
@@ -92,6 +97,7 @@ def draw(run, model, out_path):
     ax.legend(loc="upper right")
     ax.set_title(
         f"{run.get('suite')} / {run.get('prompt_set')} / {model} / "
+        f"{task or 'all tasks'} / "
         f"repeats={run.get('repeats')} max_attempts={run.get('max_attempts')}"
     )
 
@@ -128,6 +134,8 @@ def draw(run, model, out_path):
 def main():
     parser = argparse.ArgumentParser(description="水準ごとの消費を図にする")
     parser.add_argument("path", nargs="?", help="結果JSON（省略時は results/ の最新）")
+    parser.add_argument("--task", help="このタスクだけを図にする（既定は全タスクまとめて）")
+    parser.add_argument("--per-task", action="store_true", help="タスクごとに1枚ずつ出す")
     args = parser.parse_args()
     for stream in (sys.stdout, sys.stderr):
         try:
@@ -140,10 +148,17 @@ def main():
         run = json.load(f)
     if len(run.get("conditions", [])) < 3:
         raise SystemExit("条件が3つ未満です。水準ごとの図は出しません。")
+    tasks = [None]
+    if args.per_task:
+        tasks = sorted({r["task_id"] for r in run["results"]})
+    elif args.task:
+        tasks = [args.task]
     for model in run["models"]:
-        out = path.with_name(f"{path.stem}_{model}.png")
-        draw(run, model, out)
-        print(f"saved: {out}")
+        for task in tasks:
+            suffix = f"_{task}" if task else ""
+            out = path.with_name(f"{path.stem}_{model}{suffix}.png")
+            draw(run, model, out, task)
+            print(f"saved: {out}")
 
 
 if __name__ == "__main__":

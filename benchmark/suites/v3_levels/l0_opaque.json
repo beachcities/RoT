@@ -54,6 +54,17 @@
       "tax_24": 66000000,
       "flg": "Y",
       "end_dt": null
+    },
+    {
+      "id": "org_006",
+      "cd": 303,
+      "nm": "Zeta Holdings",
+      "emp": 55,
+      "cap": 20000000,
+      "val_24": 910,
+      "tax_24": 91000000,
+      "flg": "Y",
+      "end_dt": null
     }
   ]
 }

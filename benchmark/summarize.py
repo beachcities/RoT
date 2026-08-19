@@ -104,6 +104,9 @@ def summarize_condition(rows, max_attempts=None):
         # 試行回数が上限に張り付いた件数。上限で頭を打っているなら、試行回数は
         # 連続量として読めない。
         "at_cap": None,
+        # タスクごとの内訳。タスクをまたいで混ぜると、難度の違う問いが1つの
+        # 中央値に潰れる。
+        "per_task": {},
     }
     if not usable:
         return stats
@@ -157,6 +160,7 @@ def summarize_condition(rows, max_attempts=None):
                 None if not max_attempts
                 else sum(1 for r in usable if r["attempts"] >= max_attempts)
             ),
+            "per_task": per_task_stats(usable),
             "solved_attempts_dist": distribution(
                 [r["attempts"] for r in usable if r["success"]]
             ),
@@ -166,6 +170,22 @@ def summarize_condition(rows, max_attempts=None):
         }
     )
     return stats
+
+
+def per_task_stats(usable):
+    """タスクごとの正答数と消費。難度の違う問いを混ぜないために出す。"""
+    out = {}
+    for row in usable:
+        out.setdefault(row["task_id"], []).append(row)
+    return {
+        task_id: {
+            "used": len(rows),
+            "successes": sum(1 for r in rows if r["success"]),
+            "tokens": distribution([r["total_tokens"] for r in rows]),
+            "attempts": distribution([r["attempts"] for r in rows]),
+        }
+        for task_id, rows in out.items()
+    }
 
 
 def compare(target, baseline):
@@ -452,6 +472,27 @@ def render(summary):
                              "n/a" if att["median"] is None else f"{float(att['median']):.1f}"],
                             widths))
                 )
+
+        tasks = summary.get("tasks") or []
+        if len(tasks) > 1:
+            for title, pick in (
+                ("正答数（タスク別）", lambda st: (
+                    "-" if not st else f"{st['successes']}/{st['used']}")),
+                ("総トークン中央値（タスク別）", lambda st: (
+                    "-" if not st else cell(st["tokens"]["median"], 0))),
+            ):
+                lines.append("")
+                lines.append(f"  {title}")
+                cols = [("水準", 18)] + [(t, 12) for t in tasks]
+                header = row(cols)
+                lines.append(header)
+                lines.append("-" * display_width(header))
+                widths = [w for _, w in cols]
+                for condition, st in entry["per_condition"].items():
+                    values = [condition] + [
+                        pick(st["per_task"].get(task_id)) for task_id in tasks
+                    ]
+                    lines.append(row(zip(values, widths)))
 
         if len(entry["per_condition"]) > 2:
             lines.append("")

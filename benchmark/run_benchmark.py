@@ -368,6 +368,7 @@ def parse_args():
         "--conditions",
         help="走らせるデータ条件をカンマ区切りで絞る（既定は組の全条件）",
     )
+    parser.add_argument("--tasks", help="走らせるタスクIDをカンマ区切りで絞る（既定は全タスク）")
     parser.add_argument(
         "--show-trials",
         action="store_true",
@@ -422,6 +423,17 @@ def main():
             )
         conditions = {c: conditions[c] for c in wanted}
         condition_spec = [e for e in condition_spec if e["name"] in conditions]
+
+    if args.tasks:
+        wanted = [t.strip() for t in args.tasks.split(",") if t.strip()]
+        known = {t["task_id"] for t in tasks}
+        unknown = [t for t in wanted if t not in known]
+        if unknown:
+            raise SystemExit(
+                f"タスク {', '.join(unknown)} は組 {suite!r} にありません。"
+                f"あるのは: {', '.join(sorted(known))}"
+            )
+        tasks = [t for t in tasks if t["task_id"] in wanted]
 
     cells = len(models) * len(conditions) * len(tasks)
     print(

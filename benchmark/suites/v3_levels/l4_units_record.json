@@ -54,6 +54,17 @@
       "consumption_tax_2024_yen": 66000000,
       "activity_status": "Y",
       "closure_date": null
+    },
+    {
+      "corporate_id": "org_006",
+      "industry_code": 303,
+      "company_name": "Zeta Holdings",
+      "employee_count_persons": 55,
+      "capital_stock_yen": 20000000,
+      "revenue_2024_million_yen": 910,
+      "consumption_tax_2024_yen": 91000000,
+      "activity_status": "Y",
+      "closure_date": null
     }
   ]
 }
