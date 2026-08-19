@@ -26,6 +26,7 @@ run_benchmark.py から呼ばれるほか、保存済みの結果に対して単
 
 import argparse
 import json
+import statistics
 import sys
 import unicodedata
 from pathlib import Path
@@ -44,6 +45,33 @@ def ratio(target, baseline):
     if baseline == 0:
         return None
     return round(target / baseline, 4)
+
+
+def distribution(values):
+    """1試行ごとの値の散らばり。平均だけでは分布の形が見えないため。"""
+    values = sorted(values)
+    n = len(values)
+    empty = {"n": n, "median": None, "q1": None, "q3": None, "min": None, "max": None}
+    if not n:
+        return empty
+    q1 = q3 = None
+    if n >= 2:
+        q1, _, q3 = statistics.quantiles(values, n=4, method="inclusive")
+    return {
+        "n": n,
+        "median": round(statistics.median(values), 4),
+        "q1": None if q1 is None else round(q1, 4),
+        "q3": None if q3 is None else round(q3, 4),
+        "min": values[0],
+        "max": values[-1],
+    }
+
+
+def ranges_overlap(a, b):
+    """二つの分布の最小-最大が重なるか。検定ではなく、範囲を並べただけのもの。"""
+    if a["min"] is None or b["min"] is None:
+        return None
+    return a["min"] <= b["max"] and b["min"] <= a["max"]
 
 
 def summarize_condition(rows):
@@ -65,6 +93,9 @@ def summarize_condition(rows):
         "total_tokens": None,
         "tokens_per_trial": None,
         "rot_per_1k": None,
+        "total_tokens_dist": distribution([]),
+        "attempts_dist": distribution([]),
+        "rot_per_trial_dist": distribution([]),
     }
     if not usable:
         return stats
@@ -94,6 +125,17 @@ def summarize_condition(rows):
             "total_tokens": total_tokens,
             "tokens_per_trial": round(total_tokens / len(usable), 1),
             "rot_per_1k": round(successes / total_tokens * 1000, 4) if total_tokens else None,
+            "total_tokens_dist": distribution([r["total_tokens"] for r in usable]),
+            "attempts_dist": distribution([r["attempts"] for r in usable]),
+            # 反復ごとの ROT。解けなかった反復は 0 になるので分布は二山になる。
+            # プールした ROT（上の rot_per_1k）とは別物として読むこと。
+            "rot_per_trial_dist": distribution(
+                [
+                    round((1.0 if r["success"] else 0.0) / r["total_tokens"] * 1000, 4)
+                    for r in usable
+                    if r["total_tokens"]
+                ]
+            ),
         }
     )
     return stats
@@ -125,6 +167,20 @@ def compare(target, baseline):
     if baseline["used"] < 3 or target["used"] < 3:
         notes.append("試行数が少ない。比のばらつきを評価できる規模ではない")
 
+    overlap = ranges_overlap(target["total_tokens_dist"], baseline["total_tokens_dist"])
+    if overlap is True:
+        notes.append(
+            f"総トークンの範囲が条件間で重なっている"
+            f"（各 n={baseline['used']}, {target['used']}）。この反復数で見るかぎり、"
+            "条件間の差はばらつきに埋もれている。検定ではない"
+        )
+    elif overlap is False:
+        notes.append(
+            f"総トークンの範囲は条件間で重なっていない"
+            f"（各 n={baseline['used']}, {target['used']}）。範囲を並べただけであり、"
+            "検定ではない"
+        )
+
     return {
         "available": True,
         "baseline": BASELINE_CONDITION,
@@ -134,6 +190,12 @@ def compare(target, baseline):
         "prompt_tokens_ratio": ratio(target["prompt_tokens"], baseline["prompt_tokens"]),
         "completion_tokens_ratio": ratio(target["completion_tokens"], baseline["completion_tokens"]),
         "attempts_ratio": ratio(target["attempts_mean"], baseline["attempts_mean"]),
+        "total_tokens_median_ratio": ratio(
+            target["total_tokens_dist"]["median"], baseline["total_tokens_dist"]["median"]
+        ),
+        "total_tokens_range_overlap": ranges_overlap(
+            target["total_tokens_dist"], baseline["total_tokens_dist"]
+        ),
         "success_rate_delta": round(target["success_rate"] - baseline["success_rate"], 4),
         "notes": notes,
     }
@@ -147,6 +209,10 @@ def summarize(run):
         if r["model"] not in models:
             models.append(r["model"])
     conditions = run.get("conditions") or [BASELINE_CONDITION, TARGET_CONDITION]
+    task_ids = []
+    for r in results:
+        if r.get("task_id") not in task_ids:
+            task_ids.append(r.get("task_id"))
 
     per_model = {}
     for model in models:
@@ -167,6 +233,8 @@ def summarize(run):
     return {
         "models": models,
         "conditions": conditions,
+        "tasks": task_ids,
+        "repeats": run.get("repeats"),
         "baseline_condition": BASELINE_CONDITION,
         "target_condition": TARGET_CONDITION,
         "excluded_trials": excluded,
@@ -199,6 +267,26 @@ def cell(value, digits=None):
     return str(value)
 
 
+def wrap(text, width=72, indent=""):
+    """表示幅で折り返す。全角が混ざるので textwrap は使えない。"""
+    lines = []
+    current = ""
+    for char in text:
+        if display_width(current) + display_width(char) > width and current:
+            lines.append(indent + current)
+            current = ""
+        current += char
+    if current:
+        lines.append(indent + current)
+    return lines
+
+
+def span(low, high, digits=None):
+    if low is None or high is None:
+        return "n/a"
+    return f"{cell(low, digits)}-{cell(high, digits)}"
+
+
 def pct(value):
     return "n/a" if value is None else f"{value * 100:.1f}%"
 
@@ -216,9 +304,20 @@ CONDITION_COLS = [
     ("ROT/1k", 9),
 ]
 
+SPREAD_COLS = [
+    ("condition", 18),
+    ("正答/n", 9),
+    ("総token中央", 12),
+    ("Q1-Q3", 14),
+    ("最小-最大", 14),
+    ("ROT/1k中央", 12),
+    ("ROT/1k範囲", 16),
+]
+
 RATIO_LABELS = [
     ("rot_ratio", "ROT/1k"),
     ("total_tokens_ratio", "総トークン"),
+    ("total_tokens_median_ratio", "総トークン中央値"),
     ("prompt_tokens_ratio", "入力トークン"),
     ("completion_tokens_ratio", "生成トークン"),
     ("attempts_ratio", "試行回数"),
@@ -254,24 +353,46 @@ def render(summary):
             ]
             lines.append(row(zip(values, widths)) + note)
 
+        lines.append("")
+        lines.append("  反復にわたるばらつき（値は1試行あたり）")
+        header = row(SPREAD_COLS)
+        lines.append(header)
+        lines.append("-" * display_width(header))
+        widths = [w for _, w in SPREAD_COLS]
+        for condition, st in entry["per_condition"].items():
+            tok = st["total_tokens_dist"]
+            rot = st["rot_per_trial_dist"]
+            values = [
+                condition,
+                "n/a" if st["successes"] is None else f"{st['successes']}/{st['used']}",
+                cell(tok["median"], 0),
+                span(tok["q1"], tok["q3"], 0),
+                span(tok["min"], tok["max"], 0),
+                cell(rot["median"], 4),
+                span(rot["min"], rot["max"], 4),
+            ]
+            lines.append(row(zip(values, widths)))
+
         comparison = entry.get("comparison")
         if not comparison:
             continue
         lines.append("")
         if not comparison["available"]:
             for note in comparison["notes"]:
-                lines.append(f"  * {note}")
+                lines.extend(wrap(note, width=70, indent="  * "))
             continue
         lines.append(
             f"  条件比 {comparison['target']} / {comparison['baseline']}"
             "  （1.0 が「差なし」。1より大きければ左が大きい）"
         )
         for key, label in RATIO_LABELS:
-            lines.append("    " + pad(label, 16) + cell(comparison[key], 4))
+            lines.append("    " + pad(label, 18) + cell(comparison[key], 4))
         delta = comparison["success_rate_delta"]
-        lines.append("    " + pad("正答率の差", 16) + f"{delta * 100:+.1f} ポイント")
+        lines.append("    " + pad("正答率の差", 18) + f"{delta * 100:+.1f} ポイント")
         for note in comparison["notes"]:
-            lines.append(f"    * {note}")
+            wrapped = wrap(note, width=68)
+            lines.append(f"    * {wrapped[0]}")
+            lines.extend(f"      {line}" for line in wrapped[1:])
 
     ratios = [
         (m, e["comparison"])
@@ -310,6 +431,20 @@ def render(summary):
     lines.append("  * 自己記述的なデータは記述が増える分だけ入力が長くなる。総トークンの")
     lines.append("    比を見るときは、入力と生成のどちらが動いたのかを分けて見ること。")
     lines.append("  * CoT が n/a のモデルは内訳が取れていない。総量のみの比較になる。")
+    lines.append("  * ROT/1k はプール算出（正答数 / 総トークン × 1000）。ばらつき表の")
+    lines.append("    ROT/1k は反復ごとの値で、解けなかった反復は 0 になるため二山になる。")
+    lines.append("    両者は別物として読むこと。")
+    if summary.get("repeats"):
+        note = (
+            f"反復 {summary['repeats']} 回は暫定値。差の大きさがばらつきに対して"
+            "どの程度かを見て、必要なら増やす前提の数字。"
+        )
+        wrapped = wrap(note, width=70)
+        lines.append(f"  * {wrapped[0]}")
+        lines.extend(f"    {line}" for line in wrapped[1:])
+    if len(summary.get("tasks") or []) == 1:
+        lines.append("  * タスクが1件しかないため、ばらつきは単一タスクの反復のみから来ている。")
+        lines.append("    タスク間の差は評価できない。")
     if summary["excluded_trials"]:
         lines.append(
             f"  * {summary['excluded_trials']} 件を集計から除外した"

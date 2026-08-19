@@ -367,6 +367,89 @@ def _():
     assert "トークナイザ" in text
 
 
+# --- ばらつき ------------------------------------------------------------
+
+
+@check("ばらつき: 中央値・四分位・範囲を出す")
+def _():
+    d = summarize.distribution([100, 200, 300, 400, 500])
+    assert d["n"] == 5
+    assert d["median"] == 300, d["median"]
+    assert d["min"] == 100 and d["max"] == 500
+    assert d["q1"] == 200 and d["q3"] == 400, (d["q1"], d["q3"])
+
+
+@check("ばらつき: 1点しかなければ四分位は出さない")
+def _():
+    d = summarize.distribution([100])
+    assert d["median"] == 100
+    assert d["q1"] is None and d["q3"] is None
+    assert summarize.distribution([])["median"] is None
+
+
+@check("ばらつき: 範囲の重なりを判定する")
+def _():
+    a = summarize.distribution([100, 200])
+    b = summarize.distribution([150, 300])
+    c = summarize.distribution([500, 600])
+    assert summarize.ranges_overlap(a, b) is True
+    assert summarize.ranges_overlap(a, c) is False
+    assert summarize.ranges_overlap(a, summarize.distribution([])) is None
+
+
+@check("ばらつき: プールした ROT と反復ごとの ROT は別物として出す")
+def _():
+    # 5回中3回だけ 1000 トークンで解け、2回は 3000 トークン使って解けない。
+    rows = [fake_row("m", "raw", True, 1000) for _ in range(3)]
+    rows += [fake_row("m", "raw", False, 3000) for _ in range(2)]
+    st = summarize.summarize(fake_run(rows))["per_model"]["m"]["per_condition"]["raw"]
+    assert st["successes"] == 3 and st["used"] == 5
+    # プール: 3 / 9000 x 1000 = 0.3333
+    assert st["rot_per_1k"] == 0.3333, st["rot_per_1k"]
+    # 反復ごと: 0, 0, 1.0, 1.0, 1.0 -> 中央値 1.0。二山になることを示す。
+    per_trial = st["rot_per_trial_dist"]
+    assert per_trial["median"] == 1.0, per_trial["median"]
+    assert per_trial["min"] == 0.0 and per_trial["max"] == 1.0
+    assert st["total_tokens_dist"]["min"] == 1000
+    assert st["total_tokens_dist"]["max"] == 3000
+
+
+@check("ばらつき: 範囲が重なるかを条件比の注記に出す")
+def _():
+    overlapping = [
+        fake_row("m", "raw", True, 1000),
+        fake_row("m", "raw", True, 2000),
+        fake_row("m", "self_descriptive", True, 1500),
+        fake_row("m", "self_descriptive", True, 2500),
+    ]
+    c = summarize.summarize(fake_run(overlapping))["per_model"]["m"]["comparison"]
+    assert c["total_tokens_range_overlap"] is True
+    assert any("重なっている" in n for n in c["notes"])
+
+    separated = [
+        fake_row("m", "raw", True, 1000),
+        fake_row("m", "raw", True, 1100),
+        fake_row("m", "self_descriptive", True, 5000),
+        fake_row("m", "self_descriptive", True, 5100),
+    ]
+    c = summarize.summarize(fake_run(separated))["per_model"]["m"]["comparison"]
+    assert c["total_tokens_range_overlap"] is False
+    assert any("重なっていない" in n for n in c["notes"])
+    assert c["total_tokens_median_ratio"] == 4.8095, c["total_tokens_median_ratio"]
+
+
+@check("ばらつき: 反復数とタスク1件の留保を出力に出す")
+def _():
+    rows = [fake_row("m", "raw", True, 1000), fake_row("m", "self_descriptive", True, 900)]
+    run = fake_run(rows)
+    run["repeats"] = 5
+    summary = summarize.summarize(run)
+    assert summary["repeats"] == 5 and summary["tasks"] == ["t"]
+    text = summarize.render(summary)
+    assert "暫定値" in text
+    assert "単一タスクの反復のみ" in text
+
+
 def main():
     rb.configure_stdout()
     failed = 0
