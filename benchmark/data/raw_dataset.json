@@ -1,0 +1,23 @@
+[
+  {
+    "id": "org_001",
+    "cd": 101,
+    "nm": "Alpha Inc",
+    "val_24": 1200,
+    "flg": "Y"
+  },
+  {
+    "id": "org_002",
+    "cd": 102,
+    "nm": "Beta LLC",
+    "val_24": 850,
+    "flg": "N"
+  },
+  {
+    "id": "org_003",
+    "cd": 101,
+    "nm": "Gamma Co",
+    "val_24": 430,
+    "flg": "N"
+  }
+]
