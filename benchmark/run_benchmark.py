@@ -343,8 +343,11 @@ def main():
 
         models = DEFAULT_MOCK_MODELS
 
-    max_attempts = args.max_attempts or MAX_ATTEMPTS
-    repeats = args.repeats or REPEATS
+    # `or` で既定に落とすと 0 が黙って既定値に化ける。指定されたかどうかで見る。
+    max_attempts = MAX_ATTEMPTS if args.max_attempts is None else args.max_attempts
+    repeats = REPEATS if args.repeats is None else args.repeats
+    if max_attempts < 1:
+        raise SystemExit("--max-attempts / MAX_ATTEMPTS は1以上である必要があります")
     if repeats < 1:
         raise SystemExit("--repeats / REPEATS は1以上である必要があります")
     client = build_client(mock=args.mock)

@@ -238,6 +238,36 @@ def _():
     assert rb.REPEATS == 5, rb.REPEATS
 
 
+def run_main(*argv):
+    """引数を与えて main() を呼ぶ。入口の検証を踏むためだけに使う。"""
+    saved = sys.argv
+    sys.argv = ["run_benchmark.py", "--mock", "--no-save", *argv]
+    try:
+        return rb.main()
+    finally:
+        sys.argv = saved
+
+
+@check("反復: --repeats 0 は既定値に化けず弾かれる")
+def _():
+    try:
+        run_main("--repeats", "0")
+    except SystemExit as exc:
+        assert "1以上" in str(exc), exc
+    else:
+        raise AssertionError("--repeats 0 が受理された")
+
+
+@check("反復: --max-attempts 0 も既定値に化けず弾かれる")
+def _():
+    try:
+        run_main("--max-attempts", "0")
+    except SystemExit as exc:
+        assert "1以上" in str(exc), exc
+    else:
+        raise AssertionError("--max-attempts 0 が受理された")
+
+
 @check("反復: 反復ごとに消費が揺れる経路を踏める")
 def _():
     rows = run_repeats("mock-noisy", repeats=5)
