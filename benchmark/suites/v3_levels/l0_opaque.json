@@ -59,40 +59,40 @@
       "id": "org_006",
       "cd": 303,
       "nm": "Zeta Holdings",
-      "emp": 55,
+      "emp": 78,
       "cap": 20000000,
       "val_24": 910,
       "tax_24": 91000000,
-      "flg": "Y",
-      "end_dt": null
+      "flg": "N",
+      "end_dt": "2024-08-31"
     },
     {
       "id": "org_007",
       "cd": 303,
       "nm": "Eta Partners",
-      "emp": 48,
+      "emp": 52,
       "cap": 15000000,
       "val_24": 620,
       "tax_24": 62000000,
       "flg": "N",
-      "end_dt": "2024-08-31"
+      "end_dt": "2024-10-15"
     },
     {
       "id": "org_008",
       "cd": 404,
       "nm": "Theta Group",
-      "emp": 72,
+      "emp": 63,
       "cap": 25000000,
       "val_24": 780,
       "tax_24": 78000000,
       "flg": "N",
-      "end_dt": "2024-10-15"
+      "end_dt": "2024-05-20"
     },
     {
       "id": "org_009",
       "cd": 404,
-      "nm": "Nu Company",
-      "emp": 53,
+      "nm": "Iota Associates",
+      "emp": 18,
       "cap": 12000000,
       "val_24": 540,
       "tax_24": 54000000,
@@ -102,46 +102,90 @@
     {
       "id": "org_010",
       "cd": 505,
-      "nm": "Iota Associates",
-      "emp": 31,
+      "nm": "Kappa Corporation",
+      "emp": 72,
       "cap": 18000000,
       "val_24": 460,
       "tax_24": 46000000,
       "flg": "N",
-      "end_dt": "2024-05-20"
+      "end_dt": "2024-07-10"
     },
     {
       "id": "org_011",
-      "cd": 606,
-      "nm": "Kappa Corporation",
-      "emp": 64,
+      "cd": 505,
+      "nm": "Lambda Enterprises",
+      "emp": 53,
       "cap": 22000000,
       "val_24": 1340,
       "tax_24": 134000000,
       "flg": "N",
-      "end_dt": "2024-07-10"
+      "end_dt": "2024-09-05"
     },
     {
       "id": "org_012",
-      "cd": 707,
-      "nm": "Lambda Enterprises",
-      "emp": 27,
+      "cd": 606,
+      "nm": "Mu Ventures",
+      "emp": 47,
       "cap": 8000000,
       "val_24": 310,
       "tax_24": 31000000,
       "flg": "N",
-      "end_dt": "2024-09-05"
+      "end_dt": "2024-12-01"
     },
     {
       "id": "org_013",
-      "cd": 808,
-      "nm": "Mu Ventures",
-      "emp": 90,
+      "cd": 606,
+      "nm": "Nu Company",
+      "emp": 36,
       "cap": 30000000,
       "val_24": 1120,
       "tax_24": 112000000,
       "flg": "N",
-      "end_dt": "2024-12-01"
+      "end_dt": "2024-04-18"
+    },
+    {
+      "id": "org_014",
+      "cd": 707,
+      "nm": "Xi Group",
+      "emp": 55,
+      "cap": 16000000,
+      "val_24": 700,
+      "tax_24": 70000000,
+      "flg": "N",
+      "end_dt": "2024-11-22"
+    },
+    {
+      "id": "org_015",
+      "cd": 707,
+      "nm": "Omicron Partners",
+      "emp": 48,
+      "cap": 11000000,
+      "val_24": 580,
+      "tax_24": 58000000,
+      "flg": "N",
+      "end_dt": "2024-05-09"
+    },
+    {
+      "id": "org_016",
+      "cd": 808,
+      "nm": "Pi Associates",
+      "emp": 90,
+      "cap": 27000000,
+      "val_24": 990,
+      "tax_24": 99000000,
+      "flg": "N",
+      "end_dt": "2024-09-28"
+    },
+    {
+      "id": "org_017",
+      "cd": 808,
+      "nm": "Rho Holdings",
+      "emp": 27,
+      "cap": 9000000,
+      "val_24": 350,
+      "tax_24": 35000000,
+      "flg": "N",
+      "end_dt": "2024-07-31"
     }
   ]
 }
