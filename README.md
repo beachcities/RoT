@@ -7,6 +7,7 @@
 | パス | 内容 |
 | --- | --- |
 | [`paper/return-on-token.md`](paper/return-on-token.md) | 試論本体（ディスカッション・ペーパー） |
+| [`paper/return-on-token.en.md`](paper/return-on-token.en.md) | 英語版（下訳）。日本語版と食い違う場合は日本語版が正 |
 | [`benchmark/`](benchmark/) | 仮説を検証するための極小プロトタイプ |
 
 ## 試論の骨子
