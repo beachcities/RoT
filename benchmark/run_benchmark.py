@@ -225,28 +225,44 @@ def load_suite(name):
     return tasks, conditions, spec
 
 
+def numbers_in(text):
+    """文字列から整数の並びをすべて取り出す。
+
+    桁区切りのコンマは数字に挟まれているものだけを落とす。空白は落とさない。
+    まとめて空白を消すと、改行で隔てられた別々の数値が1つに繋がってしまう
+    （実測: 「1,860,000,000
+
+1860000000」が 18600000001860000000 になり、
+    正答を誤答と判定していた）。
+    """
+    normalized = unicodedata.normalize("NFKC", text)
+    normalized = re.sub(r"(?<=\d),(?=\d)", "", normalized)
+    return re.findall(r"\d+", normalized)
+
+
 def extract_number(text):
     """回答から採点対象の数値を取り出す。
 
     採点規則（結果に効くので明示しておく）:
       1. NFKC で正規化する（全角数字を半角に落とす）
-      2. 桁区切り・空白・通貨記号を除去する
-      3. 残った整数の並びのうち最後のものを答えとみなす
+      2. 桁区切りのコンマ（数字に挟まれたもの）だけを落とす
+      3. 空でない最後の行を見て、そこにある最後の整数を答えとみなす
+      4. 最後の行に数値が無ければ、本文全体の最後の整数を採る
 
-    最初のものを採ると、「該当は1社です。売上は1200000000円です」の 1 を拾って
+    プロンプトが「最後の行には数値のみ」と指示しているので、まず最後の行を見る。
+    最初の数値を採ると「該当は1社です。売上は1200000000円です」の 1 を拾って
     誤答扱いになる。誤答扱いはリトライを誘発して分母を膨らませるため、測ろうと
-    している量そのものを歪める。最後を採る規則にも「1200000000円（1200百万円）」
-    のような後置注記を拾い損ねる弱点があるので、抽出結果は attempt_log に
-    extracted として残し、後から採点をやり直せるようにする。
+    している量そのものを歪める。抽出結果は attempt_log に extracted として残し、
+    後から採点をやり直せるようにする。
     """
     if not text:
         return None
-    normalized = unicodedata.normalize("NFKC", text)
-    stripped = re.sub(r"[,\s円¥￥]", "", normalized)
-    matches = re.findall(r"\d+", stripped)
-    if not matches:
-        return None
-    return matches[-1].lstrip("0") or "0"
+    lines = [line for line in text.splitlines() if line.strip()]
+    for candidate in ([lines[-1]] if lines else []) + [text]:
+        matches = numbers_in(candidate)
+        if matches:
+            return matches[-1].lstrip("0") or "0"
+    return None
 
 
 def normalize_truth(value):

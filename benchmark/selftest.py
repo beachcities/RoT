@@ -75,6 +75,40 @@ def _():
     assert rb.extract_number("該当は1社です。売上は1200000000円です。") == "1200000000"
 
 
+@check("extract_number: 改行で隔てた数値が繋がらない")
+def _():
+    # 実測で見つけた欠陥。空白をまとめて消すと別々の数値が1つになる。
+    assert rb.extract_number("1,860,000,000\n\n1860000000") == "1860000000"
+    assert rb.extract_number("1860 x 1,000,000 = 1,860,000,000\n\n1860000000") == "1860000000"
+    assert rb.extract_number("55\n55") == "55"
+
+
+@check("extract_number: 空でない最後の行を優先する")
+def _():
+    # プロンプトが「最後の行には数値のみ」と指示しているので、そこを先に見る。
+    assert rb.extract_number("計算過程で 999 を使った\n\n1200\n\n") == "1200"
+    # 最後の行に数値が無ければ本文全体から採る
+    assert rb.extract_number("答えは 1200 です\nよろしくお願いします") == "1200"
+
+
+@check("採点し直し: 入力を保存していない結果は採点し直せない")
+def _():
+    import regrade
+
+    assert regrade.regrade({"results": [], "inputs": {}}) is None
+    run_ = {
+        "inputs": {"tasks": [{"task_id": "t", "ground_truth": "55"}]},
+        "results": [{
+            "model": "m", "condition": "c", "task_id": "t", "repeat": 1,
+            "attempt_log": [{"attempt": 1, "answer": "55\n55", "extracted": "5555",
+                             "success": False}],
+        }],
+    }
+    changed = regrade.regrade(run_)
+    assert len(changed) == 1, changed
+    assert changed[0]["now_extracted"] == "55" and changed[0]["now_success"] is True
+
+
 @check("extract_number: 数値が無ければ None")
 def _():
     assert rb.extract_number("わかりません") is None
