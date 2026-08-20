@@ -53,6 +53,20 @@ def file_digest(path):
         return None
 
 
+def sdk_version():
+    if MOCK_ONLY_SDK[0]:
+        return "mock（HTTPクライアントを読み込んでいない）"
+    try:
+        import openai
+
+        return getattr(openai, "__version__", None)
+    except ImportError:
+        return None
+
+
+MOCK_ONLY_SDK = [False]
+
+
 def git_state():
     """コミットと、benchmark/ に未コミットの変更があるか。
 
@@ -101,6 +115,29 @@ MAX_RETRIES = env_int("MAX_RETRIES", 2)
 # どの組を使ったかは結果JSONに残す。組が違えば数値は比較できない。
 SUITE = os.getenv("SUITE", "v2d_tax")
 
+
+def env_float(name, default):
+    raw = os.getenv(name)
+    if raw is None or not raw.strip():
+        return default
+    try:
+        return float(raw.strip())
+    except ValueError:
+        raise SystemExit(f"環境変数 {name} は数値である必要があります: {raw!r}")
+
+
+# サンプリング設定。ここまでのランは指定せず SDK/サーバの既定値に任せていた。
+# 明示して記録する。値は既定値（temperature=1）に揃えてあり、これまでの測定と
+# 揃えるためのもの。0 にすると反復のばらつきがほぼ消えるので、ばらつきを見る
+# という設計と噛み合わない。seed は best-effort で、決定性の保証ではない。
+TEMPERATURE = env_float("TEMPERATURE", 1.0)
+TOP_P = env_float("TOP_P", 1.0)
+SEED = env_int("SEED", 20260820)
+
+
+def sampling_params():
+    return {"temperature": TEMPERATURE, "top_p": TOP_P, "seed": SEED}
+
 # プロンプトは prompts.json に外出しした。文言を変えると結果が動くことが実測
 # されている（「数値のみ出力」と縛ると探索が起きず raw は正答0だった、
 # リトライ文言が「読み直して」だと同じ読みを繰り返した）。条件間の差が言い回し
@@ -121,6 +158,7 @@ def build_client(mock=False):
     if mock:
         from mock_client import MockClient
 
+        MOCK_ONLY_SDK[0] = True
         return MockClient()
     from openai import OpenAI
 
@@ -263,7 +301,48 @@ def token_breakdown(usage):
     }
 
 
-def run_task(client, model, condition, data, task, max_attempts=None, repeat=1, prompts=None):
+def unsupported_param(exc, kwargs):
+    """例外がどのパラメータを拒んでいるかを返す。分からなければ None。
+
+    モデルによっては temperature や seed を受け付けない。落とさずに黙って
+    通すと「指定したつもりの設定」が記録と食い違うので、落としたことを残す。
+    """
+    text = f"{type(exc).__name__}: {exc}"
+    if not any(w in text.lower() for w in
+               ("unsupported", "unrecognized", "not supported", "invalid_request", "does not support")):
+        return None
+    for name in kwargs:
+        if name in text:
+            return name
+    return None
+
+
+def create_completion(client, model, messages, sampling):
+    """sampling を付けて投げる。拒まれたものは落として記録し、投げ直す。"""
+    while True:
+        try:
+            return client.chat.completions.create(
+                model=model, messages=messages, **sampling["used"]
+            )
+        except Exception as exc:
+            name = unsupported_param(exc, sampling["used"])
+            if name is None:
+                raise
+            sampling["dropped"][name] = f"{type(exc).__name__}: {exc}"[:300]
+            sampling["used"] = {k: v for k, v in sampling["used"].items() if k != name}
+
+
+def response_meta(response):
+    """応答そのものの素性。要求したモデル名と返ってきた実体名は別物。"""
+    return {
+        "response_model": getattr(response, "model", None),
+        "system_fingerprint": getattr(response, "system_fingerprint", None),
+        "finish_reason": getattr(response.choices[0], "finish_reason", None),
+    }
+
+
+def run_task(client, model, condition, data, task, max_attempts=None, repeat=1, prompts=None,
+             sampling=None):
     """1タスクを1条件で1回走らせる。正答するか試行を使い切るまで繰り返す。
 
     ここでいう「試行（attempt）」は同じ会話の中でのリトライ。反復（repeat）は
@@ -271,6 +350,8 @@ def run_task(client, model, condition, data, task, max_attempts=None, repeat=1, 
     """
     max_attempts = MAX_ATTEMPTS if max_attempts is None else max_attempts
     prompts = load_prompts(PROMPT_SET) if prompts is None else prompts
+    if sampling is None:
+        sampling = {"requested": sampling_params(), "used": sampling_params(), "dropped": {}}
     messages = [
         {
             "role": "user",
@@ -294,7 +375,7 @@ def run_task(client, model, condition, data, task, max_attempts=None, repeat=1, 
 
     for attempt_no in range(1, max_attempts + 1):
         try:
-            response = client.chat.completions.create(model=model, messages=messages)
+            response = create_completion(client, model, messages, sampling)
         except Exception as exc:  # 何が飛んでも、そこまでに消費したトークンは残す
             status = "error"
             error = f"{type(exc).__name__}: {exc}"
@@ -302,6 +383,7 @@ def run_task(client, model, condition, data, task, max_attempts=None, repeat=1, 
             break
 
         answer = (response.choices[0].message.content or "").strip()
+        meta = response_meta(response)
         usage = token_breakdown(getattr(response, "usage", None))
 
         if not usage["measured"]:
@@ -327,6 +409,7 @@ def run_task(client, model, condition, data, task, max_attempts=None, repeat=1, 
                 "reasoning_tokens": usage["reasoning"],
                 "completion_tokens": usage["completion"],
                 "total_tokens": usage["total"],
+                **meta,
             }
         )
 
@@ -356,6 +439,10 @@ def run_task(client, model, condition, data, task, max_attempts=None, repeat=1, 
         "task_id": task["task_id"],
         "repeat": repeat,
         "status": status,
+        # 最後の応答の素性。実体名が途中で変わった場合は attempt_log を見る。
+        "response_model": attempts[-1].get("response_model") if attempts else None,
+        "system_fingerprint": attempts[-1].get("system_fingerprint") if attempts else None,
+        "finish_reason": attempts[-1].get("finish_reason") if attempts else None,
         "error": error,
         "success": success,
         "tokens_measured": tokens_measured,
@@ -488,7 +575,14 @@ def main():
         f"{cells} セル x 反復 {repeats} 回 = {cells * repeats} 回の実行"
     )
 
+    started_at = datetime.now(timezone.utc)
     results = []
+    # サンプリング設定はモデルごとに持つ。受け付けないパラメータがあれば
+    # そのモデルの分だけ落ちる。何が落ちたかはランごとに残す。
+    sampling_by_model = {
+        m: {"requested": sampling_params(), "used": sampling_params(), "dropped": {}}
+        for m in models
+    }
     for model in models:
         for condition, data in conditions.items():
             for task in tasks:
@@ -498,7 +592,8 @@ def main():
                         f" [{repeat}/{repeats}]"
                     )
                     result = run_task(
-                        client, model, condition, data, task, max_attempts, repeat, prompts
+                        client, model, condition, data, task, max_attempts, repeat, prompts,
+                        sampling_by_model[model],
                     )
                     if result["status"] == "error":
                         print(f"  error: {result['error']}")
@@ -539,11 +634,28 @@ def main():
             "repeats": repeats,
             "request_timeout": REQUEST_TIMEOUT,
             "max_retries": MAX_RETRIES,
+            "sampling_requested": sampling_params(),
         },
+        "sampling": digest(sampling_params()),
     }
 
+    finished_at = datetime.now(timezone.utc)
     run = {
-        "run_at": datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ"),
+        "run_at": started_at.strftime("%Y%m%dT%H%M%SZ"),
+        "started_at": started_at.isoformat(),
+        "finished_at": finished_at.isoformat(),
+        "duration_sec": round((finished_at - started_at).total_seconds(), 1),
+        "argv": sys.argv,
+        "environment": {
+            "python": sys.version.split()[0],
+            "openai_sdk": sdk_version(),
+            "platform": sys.platform,
+        },
+        # 要求した設定と、モデルが実際に受け付けた設定。落ちたものは理由つき。
+        "sampling": {
+            m: {"requested": st["requested"], "used": st["used"], "dropped": st["dropped"]}
+            for m, st in sampling_by_model.items()
+        },
         "fingerprint": fingerprint,
         "inputs": inputs,
         "base_url": "mock://" if args.mock else BASE_URL,

@@ -291,6 +291,52 @@ def _():
         }, name
 
 
+# --- 記録項目 --------------------------------------------------------------
+
+
+@check("記録: 応答の実体名・system_fingerprint・finish_reason が残る")
+def _():
+    r = run("mock-reasoning")
+    assert r["response_model"] == "mock-model-2026-01-01", r["response_model"]
+    assert r["system_fingerprint"] == "fp_mock0000", r["system_fingerprint"]
+    assert r["finish_reason"] == "stop", r["finish_reason"]
+    for a in r["attempt_log"]:
+        assert a["response_model"] and a["system_fingerprint"] and a["finish_reason"]
+
+
+@check("記録: finish_reason が stop 以外でもそのまま残る")
+def _():
+    r = run("mock-length-stop", max_attempts=2)
+    assert r["finish_reason"] == "length", r["finish_reason"]
+
+
+@check("記録: 受け付けられないサンプリング設定は落として理由を残す")
+def _():
+    sampling = {"requested": rb.sampling_params(), "used": rb.sampling_params(), "dropped": {}}
+    tasks, data = load("raw" if "raw" in rb.load_suite(SUITE)[1] else
+                       next(iter(rb.load_suite(SUITE)[1])))
+    client = rb.build_client(mock=True)
+    r = rb.run_task(client, "mock-no-temperature", "raw", data, tasks[0], 1, 1, None, sampling)
+    assert r["status"] == "ok", r["error"]
+    assert set(sampling["dropped"]) == {"temperature", "seed"}, sampling["dropped"]
+    assert set(sampling["used"]) == {"top_p"}, sampling["used"]
+    assert sampling["requested"] == rb.sampling_params()  # 要求した内容は変えない
+
+
+@check("記録: ラン全体に argv・SDK版・開始終了時刻・サンプリングが残る")
+def _():
+    import contextlib
+    import io
+
+    with contextlib.redirect_stdout(io.StringIO()):
+        run_ = run_main("--models", "mock-reasoning", "--repeats", "1")
+    for key in ("argv", "environment", "started_at", "finished_at", "duration_sec", "sampling"):
+        assert key in run_, key
+    assert run_["environment"]["python"] and run_["environment"]["openai_sdk"]
+    assert run_["sampling"]["mock-reasoning"]["requested"] == rb.sampling_params()
+    assert run_["fingerprint"]["settings"]["sampling_requested"] == rb.sampling_params()
+
+
 # --- 結果の同定 ------------------------------------------------------------
 
 

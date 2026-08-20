@@ -211,6 +211,8 @@ python selftest.py                      # 記録のされ方を検証する（�
 | `mock-fullwidth` | 全角数字で返す |
 | `mock-error` | 1回目から通信が落ちる |
 | `mock-error-midway` | 途中で落ちる（そこまでのトークンは残る） |
+| `mock-no-temperature` | `temperature` と `seed` を受け付けないモデル（落として投げ直す経路） |
+| `mock-length-stop` | `finish_reason` が `stop` 以外で返る |
 | `mock-noisy` | 反復ごとに消費が揺れる（ばらつき表示の確認用の任意値） |
 | `mock-flaky` | 反復のうち何回かだけ解ける（正答数 n/N の確認用） |
 | `mock-varied` | データ条件で試行回数が変わる（集計表の書式確認用の任意値） |
@@ -222,6 +224,20 @@ python selftest.py                      # 記録のされ方を検証する（�
 - `inputs` — その実行で実際に使ったタスクとデータ条件の**本文そのもの**
 - `fingerprint` — 突き合わせ用のハッシュ（`sha256` の先頭16桁）
 
+試行ごとに、応答の**実体名**（`response_model`）・`system_fingerprint`・`finish_reason` を記録します。要求したモデル名と返ってきた実体名は別物なので、両方残します。ラン全体には `argv`・`started_at` / `finished_at` / `duration_sec`・Python と OpenAI SDK の版・**サンプリング設定**が入ります。
+
+#### サンプリング設定
+
+`TEMPERATURE` / `TOP_P` / `SEED` で指定し、結果に記録します。**ここまでのランは指定せず既定値に任せていました。** 値は既定と同じ `temperature=1.0` / `top_p=1.0` に揃えてあります。0 にすると反復のばらつきがほぼ消え、ばらつきを見るという設計と噛み合わないためです。`seed` は best-effort で、決定性の保証ではありません。
+
+モデルによっては `temperature` や `seed` を受け付けません。その場合は**そのパラメータを落として投げ直し、落としたことと理由を記録します**（`sampling.<model>.dropped`）。要求した内容（`requested`）は書き換えません。黙って通すと、指定したつもりの設定と記録が食い違うためです。
+
+| 変数 | 既定値 |
+| --- | --- |
+| `TEMPERATURE` | `1.0` |
+| `TOP_P` | `1.0` |
+| `SEED` | `20260820` |
+
 `fingerprint` に入るもの:
 
 | 項目 | 中身 |
@@ -230,7 +246,7 @@ python selftest.py                      # 記録のされ方を検証する（�
 | `prompt_set` / `prompt` | プロンプト一式の名前と、本文＋リトライ文言のハッシュ |
 | `code` | `run_benchmark.py` / `summarize.py` / `prompts.json` のファイルハッシュ |
 | `git` | コミットと、`benchmark/` に未コミットの変更があるか（`dirty`）。判定できなかった場合は `null` で、`false` とは区別します |
-| `settings` | 試行上限・反復数・タイムアウト・SDK再送回数 |
+| `settings` | 試行上限・反復数・タイムアウト・SDK再送回数・要求したサンプリング設定 |
 
 #### 既存の結果への後付け
 
@@ -298,6 +314,9 @@ python summarize.py --json
 | `MAX_ATTEMPTS` | `3` | 1タスクあたりの最大試行回数 |
 | `REPEATS` | `5` | 1セルあたりの反復回数（暫定値。→「[反復回数について](#反復回数について)」） |
 | `SUITE` | `v2d_tax` | データとタスクの組（`suites/` 配下の名前） |
+| `TEMPERATURE` | `1.0` | サンプリング温度（明示して記録する） |
+| `TOP_P` | `1.0` | top-p |
+| `SEED` | `20260820` | seed（best-effort。決定性の保証ではない） |
 | `PROMPT` | `p1_baseline` | プロンプト一式（`prompts.json` のキー） |
 | `REQUEST_TIMEOUT` | `120` | 1リクエストのタイムアウト（秒） |
 | `MAX_RETRIES` | `2` | 通信エラー時にSDKが再送する回数（測定上の試行回数とは別） |

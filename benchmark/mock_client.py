@@ -46,10 +46,15 @@ def _usage(prompt_tokens, completion_tokens, reasoning_tokens=None, details="obj
     return usage
 
 
-def _response(content, usage):
+def _response(content, usage, model="mock-model-2026-01-01", finish_reason="stop"):
+    """実サーバに倣い、要求したモデル名とは別に実体名と system_fingerprint を返す。"""
     return SimpleNamespace(
-        choices=[SimpleNamespace(message=SimpleNamespace(content=content), finish_reason="stop")],
+        choices=[SimpleNamespace(
+            message=SimpleNamespace(content=content), finish_reason=finish_reason
+        )],
         usage=usage,
+        model=model,
+        system_fingerprint="fp_mock0000",
     )
 
 
@@ -186,6 +191,27 @@ def s_flaky(ctx):
     return _response(_wrong(ctx), _usage(420 + 40 * ctx.attempt, 180, reasoning_tokens=150))
 
 
+def s_no_temperature(ctx):
+    """temperature を受け付けないモデル。落として投げ直す経路を踏むためのもの。
+
+    実サーバの文面に倣った拒否メッセージを返す。
+    """
+    if "temperature" in ctx.kwargs:
+        raise MockAPIError(
+            "mock: 400 Unsupported value: 'temperature' does not support 1.0 with this model"
+        )
+    if "seed" in ctx.kwargs:
+        raise MockAPIError("mock: 400 Unrecognized request argument supplied: seed")
+    return _response(_correct(ctx), _usage(420, 260, reasoning_tokens=200),
+                     model="mock-no-temperature-2026-01-01")
+
+
+def s_length_stop(ctx):
+    """finish_reason が stop 以外で返る。記録されるかを見るためのもの。"""
+    return _response(_wrong(ctx), _usage(420, 260, reasoning_tokens=200),
+                     finish_reason="length")
+
+
 def s_varied(ctx):
     """データ条件で試行回数が変わるフィクスチャ。集計表の書式確認用。
 
@@ -213,6 +239,8 @@ SCENARIOS = {
     "mock-fullwidth": s_fullwidth,
     "mock-error": s_error,
     "mock-error-midway": s_error_midway,
+    "mock-no-temperature": s_no_temperature,
+    "mock-length-stop": s_length_stop,
     "mock-noisy": s_noisy,
     "mock-flaky": s_flaky,
     "mock-varied": s_varied,
@@ -257,6 +285,7 @@ class MockClient:
         if attempt == 1:
             self._repeats[key] = self._repeats.get(key, 0) + 1
         ctx = SimpleNamespace(
+            kwargs=kwargs,
             model=model,
             attempt=attempt,
             repeat=self._repeats.get(key, 1),
