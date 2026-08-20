@@ -291,6 +291,54 @@ def _():
         }, name
 
 
+# --- 結果の同定 ------------------------------------------------------------
+
+
+@check("指紋: 実行結果に入力の指紋と本文が残る")
+def _():
+    import contextlib
+    import io
+
+    with contextlib.redirect_stdout(io.StringIO()):
+        run = run_main("--suite", "v3_levels", "--models", "mock-reasoning", "--repeats", "1")
+    fp = run["fingerprint"]
+    for key in ("suite", "tasks", "condition_spec", "conditions", "inputs",
+                "prompt_set", "prompt", "code", "git", "settings"):
+        assert key in fp, key
+    tasks, conditions, spec = rb.load_suite("v3_levels")
+    assert fp["tasks"] == rb.digest(tasks)
+    assert fp["conditions"] == {n: rb.digest(d) for n, d in conditions.items()}
+    # 本文そのものも入っている。組は編集されるので、名前だけでは同定できない。
+    assert run["inputs"]["tasks"] == tasks
+    assert list(run["inputs"]["conditions"]) == list(conditions)
+
+
+@check("指紋: 中身が違えば指紋も違う")
+def _():
+    _, conditions, _ = rb.load_suite("v3_levels")
+    digests = {c: rb.digest(d) for c, d in conditions.items()}
+    assert len(set(digests.values())) == len(digests), digests
+    # 並び順が変われば別の入力として扱う（項目順は水準の定義そのもの）
+    assert rb.digest({"a": 1, "b": 2}) != rb.digest({"b": 2, "a": 1})
+    # 整形の違いでは変わらない
+    assert rb.digest(json.loads('{"a":1}')) == rb.digest(json.loads('{ "a" : 1 }'))
+
+
+@check("指紋: 後付けは復元できないものを復元不能と書く")
+def _():
+    import backfill_fingerprints as bf
+
+    assert bf.backfill({"fingerprint": {}}) is None
+    block = bf.backfill({"suite": "v3_levels", "conditions": ["a"], "models": ["m"]})
+    assert "conditions_data" in block["unrecoverable"]
+    assert "tasks" in block["unrecoverable"]
+    assert "prompt" in block["unrecoverable"]
+    assert "prompt" not in block["recoverable"]
+    withtext = bf.backfill({"prompt_text": {"prompt": "p", "retry": "r"}})
+    assert withtext["recoverable"]["prompt"] == rb.digest(["p", "r"])
+    assert "prompt" not in withtext["unrecoverable"]
+
+
 # --- データとタスクの組 ----------------------------------------------------
 
 

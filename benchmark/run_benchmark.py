@@ -9,9 +9,11 @@ See README.md for what this does and does not measure.
 """
 
 import argparse
+import hashlib
 import json
 import os
 import re
+import subprocess
 import sys
 import time
 import unicodedata
@@ -28,6 +30,51 @@ SUITES_DIR = BASE_DIR / "suites"
 
 # .env はこのファイルの隣を見る。リポジトリ直下から起動されても拾えるように。
 load_dotenv(BASE_DIR / ".env")
+
+
+# 指紋の桁数。衝突を心配する用途ではなく、どの入力で出た結果かを突き合わせる用途。
+FINGERPRINT_BITS = 16
+
+
+def digest(obj):
+    """JSON化できるものの内容ハッシュ。
+
+    キーの順序は保つ（レコードの項目順は水準の定義そのものなので、順序が
+    変われば別の入力である）。整形の違いでは変わらないよう、区切りは詰める。
+    """
+    payload = json.dumps(obj, ensure_ascii=False, sort_keys=False, separators=(",", ":"))
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:FINGERPRINT_BITS]
+
+
+def file_digest(path):
+    try:
+        return hashlib.sha256(Path(path).read_bytes()).hexdigest()[:FINGERPRINT_BITS]
+    except OSError:
+        return None
+
+
+def git_state():
+    """コミットと、benchmark/ に未コミットの変更があるか。
+
+    「作業ツリーを編集しながら回した結果」を後から見分けるために要る。
+    git が無い場所でも落ちないようにしておく。
+    """
+    def run(args):
+        try:
+            out = subprocess.run(
+                ["git", *args], cwd=BASE_DIR, capture_output=True, text=True, timeout=10
+            )
+        except (OSError, subprocess.SubprocessError):
+            return None
+        return out.stdout.strip() if out.returncode == 0 else None
+
+    commit = run(["rev-parse", "HEAD"])
+    status = run(["status", "--porcelain", "--", str(BASE_DIR)])
+    return {
+        "commit": commit,
+        # None は「判定できなかった」。False と区別する。
+        "dirty": None if status is None else bool(status),
+    }
 
 
 def env_int(name, default):
@@ -468,8 +515,37 @@ def main():
             "JSONには常に入っている。"
         )
 
+    # 結果ファイルだけを見て、どの入力で出たものか分かるようにする。
+    # 指紋は突き合わせ用、inputs は中身そのもの（組は編集されるので、名前だけでは
+    # 同じ入力だったことを保証できない）。
+    inputs = {"tasks": tasks, "conditions": conditions, "condition_spec": condition_spec}
+    fingerprint = {
+        "algorithm": f"sha256[:{FINGERPRINT_BITS}] of compact JSON",
+        "suite": suite,
+        "tasks": digest(tasks),
+        "condition_spec": digest(condition_spec),
+        "conditions": {name: digest(data) for name, data in conditions.items()},
+        "inputs": digest(inputs),
+        "prompt_set": prompt_set,
+        "prompt": digest([prompts["prompt"], prompts["retry"]]),
+        "code": {
+            "run_benchmark.py": file_digest(BASE_DIR / "run_benchmark.py"),
+            "summarize.py": file_digest(BASE_DIR / "summarize.py"),
+            "prompts.json": file_digest(PROMPTS_PATH),
+        },
+        "git": git_state(),
+        "settings": {
+            "max_attempts": max_attempts,
+            "repeats": repeats,
+            "request_timeout": REQUEST_TIMEOUT,
+            "max_retries": MAX_RETRIES,
+        },
+    }
+
     run = {
         "run_at": datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ"),
+        "fingerprint": fingerprint,
+        "inputs": inputs,
         "base_url": "mock://" if args.mock else BASE_URL,
         "mock": args.mock,
         "suite": suite,
