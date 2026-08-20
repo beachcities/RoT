@@ -24,7 +24,7 @@ def _short(run_at):
 
 
 def load_runs(suite=SUITE, include_mock=False):
-    """(runs, rows) を返す。
+    """(runs, rows) を返す。suite=None ですべての組を読む。
 
     runs: run単位のメタ情報のリスト
     rows: 1試行1行のdictのリスト（run間の識別子 run_id 付き）
@@ -38,7 +38,7 @@ def load_runs(suite=SUITE, include_mock=False):
                 continue
         if not isinstance(doc, dict):
             continue
-        if doc.get("suite") != suite:
+        if suite is not None and doc.get("suite") != suite:
             continue
         if doc.get("mock") and not include_mock:
             continue
@@ -49,6 +49,7 @@ def load_runs(suite=SUITE, include_mock=False):
             "run_id": run_id,
             "path": path,
             "run_at": doc.get("run_at"),
+            "suite": doc.get("suite"),
             "prompt_set": doc.get("prompt_set"),
             "models": doc.get("models"),
             "max_attempts": doc.get("max_attempts"),
