@@ -4,41 +4,65 @@
     "group": "unit",
     "query": "情報通信業に属し、かつ現在も活動中の企業について、2024年度の売上高の合計は何円ですか。単位を「円」に換算し、数値のみを答えてください。",
     "ground_truth": "1860000000",
-    "needs": "単位。業種は社名から推せる"
+    "needs": "単位。業種は社名から推せる",
+    "escape_route": {
+      "escapable": true,
+      "route": "業種は社名（Systems / Networks / Data Service）から推せる。単位は推せない"
+    }
   },
   {
     "task_id": "task_02",
     "group": "unit",
     "query": "金属製品製造業に属し、かつ現在も活動中の企業について、2024年度の売上高は何円ですか。単位を「円」に換算し、数値のみを答えてください。",
     "ground_truth": "2750000000",
-    "needs": "単位。業種は社名から推せる"
+    "needs": "単位。業種は社名から推せる",
+    "escape_route": {
+      "escapable": true,
+      "route": "業種は社名（Metal Works）から推せる。単位は推せない"
+    }
   },
   {
     "task_id": "task_03",
     "group": "unit",
     "query": "食料品製造業に属する企業について、2024年度の売上高は何円ですか。単位を「円」に換算し、数値のみを答えてください。",
     "ground_truth": "850000000",
-    "needs": "単位。業種は社名から推せる"
+    "needs": "単位。業種は社名から推せる",
+    "escape_route": {
+      "escapable": true,
+      "route": "業種は社名（Foods）から推せる。単位は推せない"
+    }
   },
   {
     "task_id": "task_04",
     "group": "code_guessable",
     "query": "情報通信業に属する企業について、従業員数の合計は何人ですか。数値のみを答えてください。",
     "ground_truth": "80",
-    "needs": "業種コードの意味。ただし社名（Systems / Networks / Data Service）から推せる"
+    "needs": "業種コードの意味。ただし社名（Systems / Networks / Data Service）から推せる",
+    "escape_route": {
+      "escapable": true,
+      "route": "業種を社名から推せる。単位は不要"
+    }
   },
   {
     "task_id": "task_05",
     "group": "flag",
     "query": "現在も活動を継続している企業について、従業員数の合計は何人ですか。数値のみを答えてください。",
     "ground_truth": "430",
-    "needs": "列挙値の意味（活動状態）。ただし廃業日の有無からも推せる"
+    "needs": "列挙値の意味（活動状態）。ただし廃業日の有無からも推せる",
+    "escape_route": {
+      "escapable": true,
+      "route": "活動状態は廃業日フィールドの有無から推せる。列挙値の意味は不要"
+    }
   },
   {
     "task_id": "task_06",
     "group": "code_opaque",
-    "query": "専門サービス業に属する企業について、従業員数は何人ですか。数値のみを答えてください。",
-    "ground_truth": "55",
-    "needs": "業種コード 303 の意味。社名 Zeta Holdings からは推せないので、書いてある段でしか解けない"
+    "query": "専門サービス業と学術研究業に属する企業について、従業員数の合計は何人ですか。数値のみを答えてください。",
+    "ground_truth": "228",
+    "needs": "業種コード 303 と 404 の意味。どちらも社名からは推せず、消去法でも辿れない",
+    "escape_route": {
+      "escapable": false,
+      "route": "社名から推せない業種が6コードあり、消去法が使えない。cd の値は見えるが2業種の合計を問うため候補は C(6,2)=15 通りで、上限10試行の総当たりでも尽くせない"
+    }
   }
 ]

@@ -34,11 +34,32 @@ CORE = [
     dict(id="org_003", cd=101, nm="Gamma Networks",       ind="情報通信業",     emp=15,  cap=10_000_000,  val=430,  end="2024-06-30"),
     dict(id="org_004", cd=202, nm="Delta Metal Works",    ind="金属製品製造業", emp=310, cap=200_000_000, val=2750, end=None),
     dict(id="org_005", cd=101, nm="Epsilon Data Service", ind="情報通信業",     emp=25,  cap=30_000_000,  val=660,  end=None),
-    # 社名から業種が推せない1件。cd=303 の意味は、書いてある段でしか分からない。
-    dict(id="org_006", cd=303, nm="Zeta Holdings",        ind="専門サービス業", emp=55,  cap=20_000_000,  val=910,  end=None),
+    # ここから下は社名から業種が推せない企業。cd の意味は、書いてある段でしか
+    # 分からない。1社だけだと「残った1社」で確定してしまう（実測: 上位モデルが
+    # そう解いた）ので複数入れる。さらに cd の値は見えているため、単一業種を
+    # 問うとコード群の総当たりで当たる。推せないコードを6種類にし、問いを
+    # 2業種の合計にすることで、候補は C(6,2)=15 通りとなり上限10試行を超える。
+    #
+    # 追加分はすべて廃業にしてある。そうすると task_01〜task_05 の正答が
+    # 前回と同じままになり、逃げ道の有無だけを変えた対照になる。
+    # 副作用として「推せない社名 ≒ 廃業」という相関ができている（Zeta のみ活動中）。
+    dict(id="org_006", cd=303, nm="Zeta Holdings",     ind="専門サービス業",       emp=55, cap=20_000_000, val=910, end=None),
+    dict(id="org_007", cd=303, nm="Eta Partners",      ind="専門サービス業",       emp=48, cap=15_000_000, val=620, end="2024-08-31"),
+    dict(id="org_008", cd=404, nm="Theta Group",       ind="学術研究業",           emp=72, cap=25_000_000, val=780, end="2024-10-15"),
+    dict(id="org_009", cd=404, nm="Nu Company",        ind="学術研究業",           emp=53, cap=12_000_000, val=540, end="2024-06-15"),
+    dict(id="org_010", cd=505, nm="Iota Associates",   ind="不動産業",             emp=31, cap=18_000_000, val=460, end="2024-05-20"),
+    dict(id="org_011", cd=606, nm="Kappa Corporation", ind="卸売業",               emp=64, cap=22_000_000, val=1340, end="2024-07-10"),
+    dict(id="org_012", cd=707, nm="Lambda Enterprises", ind="生活関連サービス業",  emp=27, cap=8_000_000,  val=310, end="2024-09-05"),
+    dict(id="org_013", cd=808, nm="Mu Ventures",       ind="娯楽業",               emp=90, cap=30_000_000, val=1120, end="2024-12-01"),
 ]
 
-CODE_NAMES = {101: "情報通信業", 201: "食料品製造業", 202: "金属製品製造業", 303: "専門サービス業"}
+CODE_NAMES = {101: "情報通信業", 201: "食料品製造業", 202: "金属製品製造業",
+              303: "専門サービス業", 404: "学術研究業", 505: "不動産業",
+              606: "卸売業", 707: "生活関連サービス業", 808: "娯楽業"}
+
+# 社名から業種が推せる企業と、推せない企業。タスクの分類の根拠になるので明示する。
+GUESSABLE_CODES = {101, 201, 202}
+OPAQUE_CODES = {303, 404, 505, 606, 707, 808}
 
 UNIT_SUFFIX = "単位を「円」に換算し、数値のみを答えてください。"
 COUNT_SUFFIX = "数値のみを答えてください。"
@@ -69,11 +90,29 @@ TASKS = [
          query="現在も活動を継続している企業について、従業員数の合計は何人ですか。" + COUNT_SUFFIX,
          ground_truth="430",
          needs="列挙値の意味（活動状態）。ただし廃業日の有無からも推せる"),
+    # 2業種の合計を問う。単一業種だと、見えている cd の値でコード群を列挙して
+    # 上限10試行の総当たりで当たってしまう。
     dict(task_id="task_06", group="code_opaque",
-         query="専門サービス業に属する企業について、従業員数は何人ですか。" + COUNT_SUFFIX,
-         ground_truth="55",
-         needs="業種コード 303 の意味。社名 Zeta Holdings からは推せないので、書いてある段でしか解けない"),
+         query="専門サービス業と学術研究業に属する企業について、従業員数の合計は何人ですか。" + COUNT_SUFFIX,
+         ground_truth="228",
+         needs="業種コード 303 と 404 の意味。どちらも社名からは推せず、消去法でも辿れない"),
 ]
+
+# タスクの分類。「手がかりがあれば書かれていなくても済む」ことを示す対照として、
+# 逃げ道を持つタスクを意図的に残してある。どれが逃げ道を持つかを明示する。
+TASK_ESCAPE_ROUTES = {
+    "task_01": {"escapable": True,
+                "route": "業種は社名（Systems / Networks / Data Service）から推せる。単位は推せない"},
+    "task_02": {"escapable": True, "route": "業種は社名（Metal Works）から推せる。単位は推せない"},
+    "task_03": {"escapable": True, "route": "業種は社名（Foods）から推せる。単位は推せない"},
+    "task_04": {"escapable": True, "route": "業種を社名から推せる。単位は不要"},
+    "task_05": {"escapable": True,
+                "route": "活動状態は廃業日フィールドの有無から推せる。列挙値の意味は不要"},
+    "task_06": {"escapable": False,
+                "route": "社名から推せない業種が6コードあり、消去法が使えない。"
+                         "cd の値は見えるが2業種の合計を問うため候補は C(6,2)=15 通りで、"
+                         "上限10試行の総当たりでも尽くせない"},
+}
 
 # 段の定義。値がそのまま conditions.json に入り、結果JSONにも残る。
 #   naming    : opaque    項目名が意味を持たない / meaningful 意味のある語
@@ -165,6 +204,8 @@ def main():
             json.dumps(document(spec), ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
         )
         conditions.append({"name": name, "file": filename, "level": len(conditions), "placed": spec})
+    for task in TASKS:
+        task["escape_route"] = TASK_ESCAPE_ROUTES[task["task_id"]]
     (OUT / "conditions.json").write_text(
         json.dumps({"conditions": conditions}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )

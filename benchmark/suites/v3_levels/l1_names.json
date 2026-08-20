@@ -65,6 +65,83 @@
       "consumption_tax_2024": 91000000,
       "activity_status": "Y",
       "closure_date": null
+    },
+    {
+      "corporate_id": "org_007",
+      "industry_code": 303,
+      "company_name": "Eta Partners",
+      "employee_count": 48,
+      "capital_stock": 15000000,
+      "revenue_2024": 620,
+      "consumption_tax_2024": 62000000,
+      "activity_status": "N",
+      "closure_date": "2024-08-31"
+    },
+    {
+      "corporate_id": "org_008",
+      "industry_code": 404,
+      "company_name": "Theta Group",
+      "employee_count": 72,
+      "capital_stock": 25000000,
+      "revenue_2024": 780,
+      "consumption_tax_2024": 78000000,
+      "activity_status": "N",
+      "closure_date": "2024-10-15"
+    },
+    {
+      "corporate_id": "org_009",
+      "industry_code": 404,
+      "company_name": "Nu Company",
+      "employee_count": 53,
+      "capital_stock": 12000000,
+      "revenue_2024": 540,
+      "consumption_tax_2024": 54000000,
+      "activity_status": "N",
+      "closure_date": "2024-06-15"
+    },
+    {
+      "corporate_id": "org_010",
+      "industry_code": 505,
+      "company_name": "Iota Associates",
+      "employee_count": 31,
+      "capital_stock": 18000000,
+      "revenue_2024": 460,
+      "consumption_tax_2024": 46000000,
+      "activity_status": "N",
+      "closure_date": "2024-05-20"
+    },
+    {
+      "corporate_id": "org_011",
+      "industry_code": 606,
+      "company_name": "Kappa Corporation",
+      "employee_count": 64,
+      "capital_stock": 22000000,
+      "revenue_2024": 1340,
+      "consumption_tax_2024": 134000000,
+      "activity_status": "N",
+      "closure_date": "2024-07-10"
+    },
+    {
+      "corporate_id": "org_012",
+      "industry_code": 707,
+      "company_name": "Lambda Enterprises",
+      "employee_count": 27,
+      "capital_stock": 8000000,
+      "revenue_2024": 310,
+      "consumption_tax_2024": 31000000,
+      "activity_status": "N",
+      "closure_date": "2024-09-05"
+    },
+    {
+      "corporate_id": "org_013",
+      "industry_code": 808,
+      "company_name": "Mu Ventures",
+      "employee_count": 90,
+      "capital_stock": 30000000,
+      "revenue_2024": 1120,
+      "consumption_tax_2024": 112000000,
+      "activity_status": "N",
+      "closure_date": "2024-12-01"
     }
   ]
 }

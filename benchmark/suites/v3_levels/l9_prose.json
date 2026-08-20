@@ -78,6 +78,90 @@
       "consumption_tax_2024_yen": 91000000,
       "is_active_entity": true,
       "closure_date": null
+    },
+    {
+      "corporate_id": "org_007",
+      "industry_code": 303,
+      "industry_name": "専門サービス業",
+      "company_name": "Eta Partners",
+      "employee_count_persons": 48,
+      "capital_stock_yen": 15000000,
+      "revenue_2024_million_yen": 620,
+      "consumption_tax_2024_yen": 62000000,
+      "is_active_entity": false,
+      "closure_date": "2024-08-31"
+    },
+    {
+      "corporate_id": "org_008",
+      "industry_code": 404,
+      "industry_name": "学術研究業",
+      "company_name": "Theta Group",
+      "employee_count_persons": 72,
+      "capital_stock_yen": 25000000,
+      "revenue_2024_million_yen": 780,
+      "consumption_tax_2024_yen": 78000000,
+      "is_active_entity": false,
+      "closure_date": "2024-10-15"
+    },
+    {
+      "corporate_id": "org_009",
+      "industry_code": 404,
+      "industry_name": "学術研究業",
+      "company_name": "Nu Company",
+      "employee_count_persons": 53,
+      "capital_stock_yen": 12000000,
+      "revenue_2024_million_yen": 540,
+      "consumption_tax_2024_yen": 54000000,
+      "is_active_entity": false,
+      "closure_date": "2024-06-15"
+    },
+    {
+      "corporate_id": "org_010",
+      "industry_code": 505,
+      "industry_name": "不動産業",
+      "company_name": "Iota Associates",
+      "employee_count_persons": 31,
+      "capital_stock_yen": 18000000,
+      "revenue_2024_million_yen": 460,
+      "consumption_tax_2024_yen": 46000000,
+      "is_active_entity": false,
+      "closure_date": "2024-05-20"
+    },
+    {
+      "corporate_id": "org_011",
+      "industry_code": 606,
+      "industry_name": "卸売業",
+      "company_name": "Kappa Corporation",
+      "employee_count_persons": 64,
+      "capital_stock_yen": 22000000,
+      "revenue_2024_million_yen": 1340,
+      "consumption_tax_2024_yen": 134000000,
+      "is_active_entity": false,
+      "closure_date": "2024-07-10"
+    },
+    {
+      "corporate_id": "org_012",
+      "industry_code": 707,
+      "industry_name": "生活関連サービス業",
+      "company_name": "Lambda Enterprises",
+      "employee_count_persons": 27,
+      "capital_stock_yen": 8000000,
+      "revenue_2024_million_yen": 310,
+      "consumption_tax_2024_yen": 31000000,
+      "is_active_entity": false,
+      "closure_date": "2024-09-05"
+    },
+    {
+      "corporate_id": "org_013",
+      "industry_code": 808,
+      "industry_name": "娯楽業",
+      "company_name": "Mu Ventures",
+      "employee_count_persons": 90,
+      "capital_stock_yen": 30000000,
+      "revenue_2024_million_yen": 1120,
+      "consumption_tax_2024_yen": 112000000,
+      "is_active_entity": false,
+      "closure_date": "2024-12-01"
     }
   ]
 }
