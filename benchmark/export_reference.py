@@ -25,6 +25,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 RESULTS_DIR = BASE_DIR / "results"
 OUT_DIR = RESULTS_DIR / "reference"
+RUNS_SUBDIR = Path("runs")
 
 # 参照点。稿の第5節が引く数値はこの3本から出ている。
 # 同一の入力・プロンプト・サンプリングで、モデルだけを変えたもの。
@@ -125,6 +126,10 @@ def render_ledger(runs):
         "",
         "`fingerprint.inputs` が同じランは、同じ入力を投げている。",
         "",
+        "**run_at がリンクになっているランは、`runs/` に個別の記録がある**"
+        "（実行の素性・経路・集計の出力・そのランに固有の留保）。",
+        "全ランに共通する読み方の留保は [READING.md](READING.md) にある。",
+        "",
         "| run_at | モデル | 組 | 水準 | タスク | 反復 | 試行上限 | レコード | inputs | 何のための実行か |",
         "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
@@ -135,8 +140,11 @@ def render_ledger(runs):
         records = len(first["records"]) if isinstance(first, dict) and "records" in first else (
             len(first) if isinstance(first, list) else "?")
         note = NOTES.get(path.name, "")
+        record = RUNS_SUBDIR / f"{run['run_at']}.md"
+        link = (f"[`{run['run_at']}`](runs/{run['run_at']}.md)"
+                if (OUT_DIR / record).is_file() else f"`{run['run_at']}`")
         lines.append(
-            f"| `{run['run_at']}` | {', '.join(run['models'])} | {run.get('suite')} | "
+            f"| {link} | {', '.join(run['models'])} | {run.get('suite')} | "
             f"{len(run.get('conditions') or [])} | {len(inputs.get('tasks') or [])} | "
             f"{run.get('repeats')} | {run.get('max_attempts')} | {records} | "
             f"`{run['fingerprint'].get('inputs')}` | {note} |"

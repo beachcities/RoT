@@ -172,6 +172,11 @@ MAX_RETRIES = env_int("MAX_RETRIES", 2)
 # どの組を使ったかは結果JSONに残す。組が違えば数値は比較できない。
 SUITE = os.getenv("SUITE", "v3_levels")
 
+# 実行経路の覚え書き。どこで・どう回したかは結果から機械的には分からないので、
+# 呼び出す側が書く（Colab のノートブック名、GPU、vLLM の起動オプションなど）。
+# 空なら空のまま残す。後から推測で埋めない。
+RUN_ROUTE = os.getenv("RUN_ROUTE", "")
+
 
 def env_float(name, default):
     raw = os.getenv(name)
@@ -824,6 +829,14 @@ def main():
             "python": sys.version.split()[0],
             "openai_sdk": sdk_version(),
             "platform": sys.platform,
+        },
+        # 実行経路。RUN_ROUTE は人が書くもので、空なら記録していないという意味。
+        "route": {
+            "note": RUN_ROUTE,
+            "base_url": "mock://" if args.mock else BASE_URL,
+            "local_server": (not args.mock) and (
+                "localhost" in BASE_URL or "127.0.0.1" in BASE_URL
+            ),
         },
         # 要求した設定と、モデルが実際に受け付けた設定。落ちたものは理由つき。
         "sampling": {

@@ -601,22 +601,40 @@ def render(summary):
     lines.append("")
     lines.append("-" * 78)
     lines.append("読み方の留保")
-    lines.append("  * 分子は正答/誤答の二値。試論が挙げた成果の測り方のいずれでもない。")
-    lines.append("  * 総トークンの絶対値はトークナイザ依存。モデル間で比べられるのは比のみ。")
-    lines.append("  * 自己記述的なデータは記述が増える分だけ入力が長くなる。総トークンの")
-    lines.append("    比を見るときは、入力と生成のどちらが動いたのかを分けて見ること。")
-    lines.append("  * CoT 列は usage が返す reasoning_tokens。これが n/a でも、応答本文に")
-    lines.append("    <think> が残っていれば思考は取れている（思考字数の列を見ること）。")
-    lines.append("    実測: vLLM を --reasoning-parser 無しで動かすと CoT は n/a、思考字数は入る。")
-    lines.append("  * 思考字数は文字数であってトークン数ではない。CoT の代わりにはならない。")
-    lines.append("  * 生成上限に達した試行は集計から外していない。到達件数は水準ごとの表の")
-    lines.append("    「生成上限」列にある。上限値は fingerprint.settings.sampling_requested。")
-    lines.append("  * 二山を分ける基準は success（正答したか）そのもの。解けた試行は打ち切りを")
-    lines.append("    待たずに終わり、解けなかった試行は上限まで使うため、混ぜた中央値は")
-    lines.append("    両者の混合比で動く。混合比は反復ごとに変わる。")
-    lines.append("  * ROT/1k はプール算出（正答数 / 総トークン × 1000）。ばらつき表の")
-    lines.append("    ROT/1k は反復ごとの値で、解けなかった反復は 0 になるため二山になる。")
-    lines.append("    両者は別物として読むこと。")
+    lines.extend(STATIC_CAVEATS)
+    lines.extend(run_caveats(summary))
+    return "\n".join(lines)
+
+
+# 全ランに共通する留保。**測り方の性質であって、そのランの性質ではない。**
+# ラン単位の記録には書かず、共通の1ファイルから参照する（→ results/reference/READING.md）。
+STATIC_CAVEATS = [
+    "  * 分子は正答/誤答の二値。試論が挙げた成果の測り方のいずれでもない。",
+    "  * 総トークンの絶対値はトークナイザ依存。モデル間で比べられるのは比のみ。",
+    "  * 自己記述的なデータは記述が増える分だけ入力が長くなる。総トークンの",
+    "    比を見るときは、入力と生成のどちらが動いたのかを分けて見ること。",
+    "  * CoT 列は usage が返す reasoning_tokens。これが n/a でも、応答本文に",
+    "    <think> が残っていれば思考は取れている（思考字数の列を見ること）。",
+    "    実測: vLLM を --reasoning-parser 無しで動かすと CoT は n/a、思考字数は入る。",
+    "  * 思考字数は文字数であってトークン数ではない。CoT の代わりにはならない。",
+    "  * 生成上限に達した試行は集計から外していない。到達件数は水準ごとの表の",
+    "    「生成上限」列にある。上限値は fingerprint.settings.sampling_requested。",
+    "  * 二山を分ける基準は success（正答したか）そのもの。解けた試行は打ち切りを",
+    "    待たずに終わり、解けなかった試行は上限まで使うため、混ぜた中央値は",
+    "    両者の混合比で動く。混合比は反復ごとに変わる。",
+    "  * ROT/1k はプール算出（正答数 / 総トークン × 1000）。ばらつき表の",
+    "    ROT/1k は反復ごとの値で、解けなかった反復は 0 になるため二山になる。",
+    "    両者は別物として読むこと。",
+]
+
+
+def run_caveats(summary):
+    """そのランに固有の留保。反復数・タスク数・除外件数から決まる。
+
+    共通の留保（STATIC_CAVEATS）と分けてあるのは、ラン単位の記録に共通部分を
+    毎回書き写すと、測り方を直したときに記録どうしが食い違うため。
+    """
+    lines = []
     if summary.get("repeats"):
         note = (
             f"反復 {summary['repeats']} 回は暫定値。差の大きさがばらつきに対して"
@@ -633,7 +651,7 @@ def render(summary):
             f"  * {summary['excluded_trials']} 件を集計から除外した"
             "（通信エラー、または usage が返らずトークン未計測）。"
         )
-    return "\n".join(lines)
+    return lines
 
 
 def latest_result_file():
