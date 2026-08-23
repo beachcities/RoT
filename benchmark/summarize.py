@@ -104,6 +104,8 @@ def summarize_condition(rows, max_attempts=None):
         # 試行回数が上限に張り付いた件数。上限で頭を打っているなら、試行回数は
         # 連続量として読めない。
         "at_cap": None,
+        # 生成上限に達した試行の数。試行上限（at_cap）とは別の打ち切り。
+        "output_capped": None,
         # タスクごとの内訳。タスクをまたいで混ぜると、難度の違う問いが1つの
         # 中央値に潰れる。
         "per_task": {},
@@ -159,6 +161,9 @@ def summarize_condition(rows, max_attempts=None):
             "at_cap": (
                 None if not max_attempts
                 else sum(1 for r in usable if r["attempts"] >= max_attempts)
+            ),
+            "output_capped": sum(
+                1 for r in usable if r.get("output_capped_attempts")
             ),
             "per_task": per_task_stats(usable),
             "solved_attempts_dist": distribution(
@@ -373,6 +378,7 @@ LEVEL_COLS = [
     ("最小-最大", 14),
     ("試行中央", 10),
     ("上限到達", 10),
+    ("生成上限", 10),
     ("ROT/1k", 9),
     ("中央値比", 10),
 ]
@@ -521,6 +527,7 @@ def render(summary):
                         span(tok["min"], tok["max"], 0),
                         "n/a" if att["median"] is None else f"{float(att['median']):.1f}",
                         cell(st["at_cap"]),
+                        cell(st["output_capped"]),
                         cell(st["rot_per_1k"], 4),
                         cell(ratio(tok["median"], base), 3),
                     ], widths))
@@ -584,6 +591,8 @@ def render(summary):
     lines.append("  * 自己記述的なデータは記述が増える分だけ入力が長くなる。総トークンの")
     lines.append("    比を見るときは、入力と生成のどちらが動いたのかを分けて見ること。")
     lines.append("  * CoT が n/a のモデルは内訳が取れていない。総量のみの比較になる。")
+    lines.append("  * 生成上限に達した試行は集計から外していない。到達件数は水準ごとの表の")
+    lines.append("    「生成上限」列にある。上限値は fingerprint.settings.sampling_requested。")
     lines.append("  * 二山を分ける基準は success（正答したか）そのもの。解けた試行は打ち切りを")
     lines.append("    待たずに終わり、解けなかった試行は上限まで使うため、混ぜた中央値は")
     lines.append("    両者の混合比で動く。混合比は反復ごとに変わる。")

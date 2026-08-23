@@ -28,3 +28,6 @@ env/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Colab のブラウザ経路に持ち込む一式（生成物）
+colab_bundle.tgz

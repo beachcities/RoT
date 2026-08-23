@@ -389,6 +389,27 @@ def _():
     assert r["finish_reason"] == "length", r["finish_reason"]
 
 
+@check("生成上限: 到達を記録し、集計から外さない")
+def _():
+    r = run("mock-length-stop", max_attempts=2)
+    assert r["output_capped_attempts"] == 2, r["output_capped_attempts"]
+    assert all(a["output_capped"] for a in r["attempt_log"])
+    # 到達しても status は ok のまま。除外の条件に触らない。
+    assert r["status"] == "ok" and r["tokens_measured"]
+    rows = [dict(r, model="m", condition="c", task_id="t", repeat=1)]
+    st = summarize.summarize({"results": rows, "conditions": ["c"], "max_attempts": 2,
+                              "repeats": 1})["per_model"]["m"]["per_condition"]["c"]
+    assert st["used"] == 1, st["used"]          # 除外されていない
+    assert st["output_capped"] == 1, st["output_capped"]
+
+
+@check("生成上限: 上限を送らない設定では 0 のまま")
+def _():
+    r = run("mock-reasoning", max_attempts=1)
+    assert r["output_capped_attempts"] == 0, r["output_capped_attempts"]
+    assert "max_tokens" not in rb.sampling_params() or rb.MAX_OUTPUT_TOKENS > 0
+
+
 @check("記録: 受け付けられないサンプリング設定は落として理由を残す")
 def _():
     sampling = {"requested": rb.sampling_params(), "used": rb.sampling_params(), "dropped": {}}

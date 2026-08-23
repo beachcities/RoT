@@ -134,9 +134,23 @@ TEMPERATURE = env_float("TEMPERATURE", 1.0)
 TOP_P = env_float("TOP_P", 1.0)
 SEED = env_int("SEED", 20260820)
 
+# 1リクエストで生成できる上限。0 なら送らない（サーバの既定に任せる）。
+#
+# 推論モデルは、書かれていない対応関係を推し量ろうとすると思考が発散する
+# （実測: Olmo-3-7B-Think が1試行で 52,625 字を書いた）。**その様子がそのまま
+# 残ることがこの測定の目的なので、短く切ってはいけない。** 切れば、切った位置が
+# 測定値を決めてしまう。試行上限10と同じ性質の制約が生成長にも入ることになる。
+#
+# ただし無制限にはできないので、十分大きい値を置いたうえで、そこに到達した件数を
+# 記録して区別する。到達した試行は集計から除外しない。
+MAX_OUTPUT_TOKENS = env_int("MAX_OUTPUT_TOKENS", 0)
+
 
 def sampling_params():
-    return {"temperature": TEMPERATURE, "top_p": TOP_P, "seed": SEED}
+    params = {"temperature": TEMPERATURE, "top_p": TOP_P, "seed": SEED}
+    if MAX_OUTPUT_TOKENS > 0:
+        params["max_tokens"] = MAX_OUTPUT_TOKENS
+    return params
 
 # プロンプトは prompts.json に外出しした。文言を変えると結果が動くことが実測
 # されている（「数値のみ出力」と縛ると探索が起きず raw は正答0だった、
@@ -474,6 +488,8 @@ def run_task(client, model, condition, data, task, max_attempts=None, repeat=1, 
                 # 思考テキストそのもの。取れなければ null。
                 "thinking": thinking,
                 "thinking_chars": None if thinking is None else len(thinking),
+                # 生成上限に達して打ち切られたか。達しても集計からは外さない。
+                "output_capped": meta["finish_reason"] == "length",
                 **meta,
             }
         )
@@ -510,6 +526,9 @@ def run_task(client, model, condition, data, task, max_attempts=None, repeat=1, 
         "finish_reason": attempts[-1].get("finish_reason") if attempts else None,
         # 思考が取れたか。取れていない（API経由など）場合は null で、0 と区別する。
         "thinking_chars": thinking_chars if thinking_seen else None,
+        # 生成上限に達した試行の数。0 は「達しなかった」で、上限を送っていない
+        # 場合との区別は fingerprint.settings.sampling_requested を見る。
+        "output_capped_attempts": sum(1 for a in attempts if a.get("output_capped")),
         "error": error,
         "success": success,
         "tokens_measured": tokens_measured,
