@@ -258,6 +258,23 @@ cp .env.example .env   # 編集する
 python run_benchmark.py
 ```
 
+### ローカルの推論モデルで `<think>` を測る（Colab）
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/beachcities/RoT/blob/main/benchmark/colab/run_local_model.ipynb)
+
+[`colab/run_local_model.ipynb`](colab/run_local_model.ipynb) を Colab で開くと、A100 上で
+[`allenai/Olmo-3-7B-Think`](https://huggingface.co/allenai/Olmo-3-7B-Think) を vLLM で立ち上げ、
+`v3_levels` の10水準を回して**中間推論のテキストそのもの**を記録します。
+
+ノートブックはこのリポジトリを `git clone` します。手元のファイルを持ち込む形にしていないのは、
+**どのコミットで回したかが結果の指紋（`fingerprint.git.commit`）に残る**ようにするためです。
+
+API 経由のモデルは `reasoning_tokens` が 0 で返り、中間推論の長さを分離できません。
+ローカルで回すと `<think>` の中身が取れます。既定のモデルは重み・学習コード・学習データが
+揃って公開されており、OSI の [Open Source AI Definition](https://opensource.org/ai/open-source-ai-definition)
+を満たす数少ない系統です（Qwen 系などは重みのみ公開で、この定義は満たしません。
+→ [`LOCAL_MODELS.md`](LOCAL_MODELS.md)）。
+
 ### 参照点のランを再現する
 
 ```bash
