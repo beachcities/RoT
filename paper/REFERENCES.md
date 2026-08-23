@@ -12,6 +12,12 @@
   https://www.goldmansachs.com/insights/articles/ai-agents-forecast-to-boost-tech-cash-flow-as-usage-soars
   第3節で引用。2026年から2030年にかけてトークン消費が24倍・月間120千兆トークンに達するとの予測、半導体側が推論の単価を年60〜70%下げているとの指摘。
 
+## 推論機能によるトークン消費の増加
+
+- Sasha Luccioni, Boris Gamazaychikov「AI Energy Score v2: Refreshed Leaderboard, now with Reasoning」（Hugging Face Blog, 2025年）
+  https://huggingface.co/blog/sasha/ai-energy-score-v2
+  第1節で引用。同一モデルについて推論機能の有無を比べ、出力トークン数が300〜800倍、消費エネルギーが150〜700倍になるとの測定。
+
 ## 計算資源最適化の枠組み
 
 - Tokenomics Foundation（Linux Foundation傘下）「The Five-Layer Tokenomics Stack」
