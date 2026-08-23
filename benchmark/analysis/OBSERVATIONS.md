@@ -14,9 +14,10 @@ APIは叩いていない。既存のJSONを読んだだけ。測定側のファ�
 > 4本目の v3_levels run（`235549Z`、10水準 × 6タスク × 5反復）が加わっている。
 > この run は**投入データが違う**（レコードが5件から6件に増えている。
 > → [REFERENCE_READINESS.md](REFERENCE_READINESS.md) 2.1）。
-> いま `figures.py` / `table.py` / `inspect_counts.py` を走らせ直すと、この4本目を含んだ
-> 図と表が出る。本文中の数値は上の3本に対するものなので、突き合わせるときは
-> `tables/counts.md` の1節で run を確認すること。
+> `table.py` は対象を上の3本に固定してあるので、走らせ直しても本文と同じ240試行が出る。
+> `figures.py` と `inspect_counts.py` は `results/` にあるものを全部拾うので、
+> 走らせ直すと4本目以降を含んだ図と表になる。本文中の数値は上の3本に対するものなので、
+> 突き合わせるときは `tables/counts.md` の1節で run を確認すること。
 
 再現:
 
@@ -42,7 +43,8 @@ python inspect_counts.py # tables/counts.md
 
 表:
 
-- [tables/all_trials_by_tokens.md](tables/all_trials_by_tokens.md) — 240試行を総トークン降順に1行ずつ。csv版も同じ内容
+- [tables/all_trials_by_tokens.md](tables/all_trials_by_tokens.md) — 240試行を総トークン降順に1行ずつ。csv版も同じ内容。
+  応答本文の列は落としてある（この3本は参照点として扱わないランなので、本文の公開方針と食い違うため）
 - [tables/counts.md](tables/counts.md) — 図を読むための素の数え上げ
 
 ---
