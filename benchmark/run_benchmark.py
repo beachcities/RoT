@@ -348,6 +348,46 @@ def create_completion(client, model, messages, sampling):
             sampling["used"] = {k: v for k, v in sampling["used"].items() if k != name}
 
 
+# 推論部分の取り出し方は2通りある。
+#   1. vLLM / SGLang を --reasoning-parser 付きで動かすと、応答が
+#      message.reasoning_content に思考を分けて返し、reasoning_tokens も埋まる
+#   2. パーサ無しだと <think>…</think> が本文にそのまま残る
+# どちらでも拾えるようにする。API 経由のモデルはどちらも返さないので None のまま。
+THINK_PATTERN = re.compile(r"<think>(.*?)</think>\s*", re.S)
+# 開始タグがチャットテンプレート側にあり、生成には終了タグしか現れないモデルがある
+# （実測: vLLM 経由の Olmo-3-7B-Think）。その場合、終了タグより前が思考。
+THINK_CLOSE = "</think>"
+
+
+def split_thinking(message):
+    """(思考テキスト, 最終本文) を返す。思考が無ければ (None, 本文)。
+
+    長さだけでなくテキストそのものを残す。何を推し量っていたかは、
+    トークン数からは分からない。
+
+    取り出し方は3通りある。
+      1. reasoning_content に分かれて返る（--reasoning-parser 付きのサーバ）
+      2. <think>…</think> が本文に対で現れる
+      3. 終了タグだけが現れる（開始タグはプロンプト側にある）
+    3 を拾い損ねると、思考を含んだ本文がそのまま会話履歴に積まれ、
+    数試行で文脈長を使い切る（実測: 5〜8試行で 16k を超えて 400 になった）。
+    """
+    content = (getattr(message, "content", None) or "")
+    thinking = getattr(message, "reasoning_content", None)
+    if thinking is None and isinstance(message, dict):
+        thinking = message.get("reasoning_content")
+    if thinking:
+        return thinking, content.strip()
+    matches = THINK_PATTERN.findall(content)
+    if matches:
+        joined = chr(10).join(m.strip() for m in matches)
+        return joined, THINK_PATTERN.sub("", content).strip()
+    if THINK_CLOSE in content:
+        head, _, tail = content.partition(THINK_CLOSE)
+        return head.strip(), tail.strip()
+    return None, content.strip()
+
+
 def response_meta(response):
     """応答そのものの素性。要求したモデル名と返ってきた実体名は別物。"""
     return {
@@ -380,6 +420,8 @@ def run_task(client, model, condition, data, task, max_attempts=None, repeat=1, 
     truth = normalize_truth(task["ground_truth"])
 
     attempts = []
+    thinking_chars = 0
+    thinking_seen = False
     totals = {"prompt": 0, "completion": 0, "reasoning": 0, "total": 0}
     reasoning_available = True
     tokens_measured = True
@@ -398,7 +440,7 @@ def run_task(client, model, condition, data, task, max_attempts=None, repeat=1, 
             attempts.append({"attempt": attempt_no, "error": error})
             break
 
-        answer = (response.choices[0].message.content or "").strip()
+        thinking, answer = split_thinking(response.choices[0].message)
         meta = response_meta(response)
         usage = token_breakdown(getattr(response, "usage", None))
 
@@ -411,6 +453,10 @@ def run_task(client, model, condition, data, task, max_attempts=None, repeat=1, 
         totals["prompt"] += usage["prompt"]
         totals["completion"] += usage["completion"]
         totals["total"] += usage["total"]
+
+        if thinking is not None:
+            thinking_seen = True
+            thinking_chars += len(thinking)
 
         extracted = extract_number(answer)
         success = extracted is not None and extracted == truth
@@ -425,6 +471,9 @@ def run_task(client, model, condition, data, task, max_attempts=None, repeat=1, 
                 "reasoning_tokens": usage["reasoning"],
                 "completion_tokens": usage["completion"],
                 "total_tokens": usage["total"],
+                # 思考テキストそのもの。取れなければ null。
+                "thinking": thinking,
+                "thinking_chars": None if thinking is None else len(thinking),
                 **meta,
             }
         )
@@ -459,6 +508,8 @@ def run_task(client, model, condition, data, task, max_attempts=None, repeat=1, 
         "response_model": attempts[-1].get("response_model") if attempts else None,
         "system_fingerprint": attempts[-1].get("system_fingerprint") if attempts else None,
         "finish_reason": attempts[-1].get("finish_reason") if attempts else None,
+        # 思考が取れたか。取れていない（API経由など）場合は null で、0 と区別する。
+        "thinking_chars": thinking_chars if thinking_seen else None,
         "error": error,
         "success": success,
         "tokens_measured": tokens_measured,

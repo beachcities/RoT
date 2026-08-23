@@ -26,10 +26,11 @@ CORE = [
     dict(id="org_005", cd=101, nm="Epsilon Data Service", ind="情報通信業",           emp=25,  cap=30_000_000,  val=660,  end=None),
 ]
 
-# 外部の常識で桁が確かめられる実在企業。どのタスクの対象にもならない業種に置く。
-ANCHOR = dict(id="org_100", cd=203, nm="トヨタ自動車", ind="輸送用機械器具製造業",
-              emp=380_793, cap=635_401_000_000, val=45_095_300, end=None)
-
+# v2c_anchor は取り下げた。外部の常識で桁が確かめられる実在企業を1件混ぜる設計で、
+# 実在企業の従業員数と売上高を合成企業と同じ配列に並べる形になっていた。数値自体は
+# 公開情報だが、合成データと同列に置くと、そのレコードも合成だと読まれるか、逆に
+# 他のレコードも実在だと読まれる。公開リポジトリに置く形として適切でないので、
+# データも生成コードも消してある。何をしていた組かは README に残した。
 TASKS = [
     dict(task_id="task_01",
          query="情報通信業に属し、かつ現在も活動中の企業について、2024年度の売上高の合計は何円ですか。単位を「円」に換算し、数値のみを答えてください。",
@@ -50,10 +51,9 @@ TASKS = [
 
 # 手がかりの組み合わせ。cap と tax と anchor だけが違う。
 VARIANTS = {
-    "v2a_emp":     dict(cap=False, tax=False, anchor=False),
-    "v2b_emp_cap": dict(cap=True,  tax=False, anchor=False),
-    "v2c_anchor":  dict(cap=True,  tax=False, anchor=True),
-    "v2d_tax":     dict(cap=True,  tax=True,  anchor=False),
+    "v2a_emp":     dict(cap=False, tax=False),
+    "v2b_emp_cap": dict(cap=True,  tax=False),
+    "v2d_tax":     dict(cap=True,  tax=True),
 }
 
 TAX_RATE = 0.10
@@ -124,7 +124,7 @@ def write(path, obj):
 
 def main():
     for name, cfg in VARIANTS.items():
-        records = CORE + ([ANCHOR] if cfg["anchor"] else [])
+        records = CORE
         d = BASE / name
         d.mkdir(parents=True, exist_ok=True)
         write(d / "raw_dataset.json", [raw_record(r, cfg) for r in records])

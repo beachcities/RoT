@@ -12,6 +12,8 @@ import json
 import sys
 import traceback
 
+from types import SimpleNamespace
+
 import run_benchmark as rb
 import summarize
 from mock_client import SCENARIOS
@@ -343,6 +345,42 @@ def _():
     assert r["finish_reason"] == "stop", r["finish_reason"]
     for a in r["attempt_log"]:
         assert a["response_model"] and a["system_fingerprint"] and a["finish_reason"]
+
+
+@check("思考: <think> を本文から切り出してテキストごと残す")
+def _():
+    r = run("mock-think-inline", max_attempts=1)
+    a = r["attempt_log"][0]
+    assert a["thinking"] and "社名から推す" in a["thinking"], a["thinking"]
+    # 本文からは <think> が取り除かれ、採点は最終回答だけを見る
+    assert "<think>" not in a["answer"], a["answer"]
+    assert a["success"] is True, a["answer"]
+    assert a["thinking_chars"] == len(a["thinking"])
+    assert r["thinking_chars"] == a["thinking_chars"]
+
+
+@check("思考: reasoning_content で分けて返る場合も拾う")
+def _():
+    r = run("mock-think-field", max_attempts=1)
+    a = r["attempt_log"][0]
+    assert a["thinking"] and "税額との比" in a["thinking"], a["thinking"]
+    assert a["answer"] == a["answer"].strip() and "<think>" not in a["answer"]
+    assert r["thinking_chars"] == len(a["thinking"])
+
+
+@check("思考: 返さないモデルでは null のまま（0 と区別する）")
+def _():
+    r = run("mock-reasoning", max_attempts=1)
+    assert r["thinking_chars"] is None, r["thinking_chars"]
+    assert r["attempt_log"][0]["thinking"] is None
+
+
+@check("思考: 複数の <think> があれば連結する")
+def _():
+    text = "<think>一つ目</think>途中<think>二つ目</think>\n55"
+    thinking, answer = rb.split_thinking(SimpleNamespace(content=text))
+    assert thinking == "一つ目" + chr(10) + "二つ目", thinking
+    assert answer.endswith("55") and "<think>" not in answer, answer
 
 
 @check("記録: finish_reason が stop 以外でもそのまま残る")

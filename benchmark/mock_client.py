@@ -46,12 +46,17 @@ def _usage(prompt_tokens, completion_tokens, reasoning_tokens=None, details="obj
     return usage
 
 
-def _response(content, usage, model="mock-model-2026-01-01", finish_reason="stop"):
-    """実サーバに倣い、要求したモデル名とは別に実体名と system_fingerprint を返す。"""
+def _response(content, usage, model="mock-model-2026-01-01", finish_reason="stop",
+              reasoning_content=None):
+    """実サーバに倣い、要求したモデル名とは別に実体名と system_fingerprint を返す。
+
+    reasoning_content は vLLM/SGLang を --reasoning-parser 付きで動かしたときの形。
+    """
+    message = SimpleNamespace(content=content)
+    if reasoning_content is not None:
+        message.reasoning_content = reasoning_content
     return SimpleNamespace(
-        choices=[SimpleNamespace(
-            message=SimpleNamespace(content=content), finish_reason=finish_reason
-        )],
+        choices=[SimpleNamespace(message=message, finish_reason=finish_reason)],
         usage=usage,
         model=model,
         system_fingerprint="fp_mock0000",
@@ -191,6 +196,26 @@ def s_flaky(ctx):
     return _response(_wrong(ctx), _usage(420 + 40 * ctx.attempt, 180, reasoning_tokens=150))
 
 
+def s_think_inline(ctx):
+    """<think> を本文に含めて返すモデル（--reasoning-parser 無しの vLLM 相当）。"""
+    think = "この設問では業種コードの対応表を探す。見当たらないので社名から推す。"
+    return _response(
+        "<think>" + think + "</think>" + chr(10) * 2 + _correct(ctx),
+        _usage(420, 260, reasoning_tokens=180),
+        model="mock-think-inline",
+    )
+
+
+def s_think_field(ctx):
+    """思考を reasoning_content に分けて返すモデル（--reasoning-parser 付き相当）。"""
+    return _response(
+        _correct(ctx),
+        _usage(420, 260, reasoning_tokens=180),
+        model="mock-think-field",
+        reasoning_content="単位が書かれていないので、税額との比から百万円と判断する。",
+    )
+
+
 def s_no_temperature(ctx):
     """temperature を受け付けないモデル。落として投げ直す経路を踏むためのもの。
 
@@ -239,6 +264,8 @@ SCENARIOS = {
     "mock-fullwidth": s_fullwidth,
     "mock-error": s_error,
     "mock-error-midway": s_error_midway,
+    "mock-think-inline": s_think_inline,
+    "mock-think-field": s_think_field,
     "mock-no-temperature": s_no_temperature,
     "mock-length-stop": s_length_stop,
     "mock-noisy": s_noisy,
