@@ -11,6 +11,7 @@
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -154,9 +155,11 @@ def main():
     elif args.task:
         tasks = [args.task]
     for model in run["models"]:
+        # モデル名には / が入りうる（allenai/Olmo-3-7B-Think）。ファイル名に使えない。
+        safe = re.sub(r"[^0-9A-Za-z._-]", "_", model)
         for task in tasks:
             suffix = f"_{task}" if task else ""
-            out = path.with_name(f"{path.stem}_{model}{suffix}.png")
+            out = path.with_name(f"{path.stem}_{safe}{suffix}.png")
             draw(run, model, out, task)
             print(f"saved: {out}")
 

@@ -170,3 +170,109 @@ API 経由の3モデルでは `reasoning_tokens` が 0 で返り、この過程�
 
 `l0`〜`l5` の思考が発散するため、**当初の「2〜3時間」は下振れである**。文脈長を広げれば
 1試行あたりの生成がさらに伸びる。CLI 経路のセッション上限 61.5 分には収まらない。
+
+---
+
+# 本実行の結果（`run_20260823T124213Z.json`）
+
+Colab の A100 で `allenai/Olmo-3-7B-Think` を vLLM で回した。132分、20実行、除外0件。
+`REPEATS=1`、`MAX_ATTEMPTS=10`、生成上限 32,768（**一度も到達しなかった**）。
+
+**入力の指紋が API の参照点3ランと一致している**（`inputs=dea1a8ccce8dbbad`、
+`prompt=3614fb04597c534a`）。コミット `c873038`、`dirty=false`。
+
+## 水準ごと
+
+| 水準 | `task_04` | `task_06` | 総token中央 | 試行中央 | 思考字数中央 |
+| --- | --- | --- | --- | --- | --- |
+| `l0_opaque` | 1/1 | **0/1** | 74,288 | 6.0 | 214,636 |
+| `l1_names` | 1/1 | **0/1** | 60,790 | 5.5 | 174,818 |
+| `l2_units_ref` | 1/1 | **0/1** | 62,438 | 5.5 | 187,837 |
+| `l3_units_doc` | 1/1 | **0/1** | 64,850 | 6.0 | 197,018 |
+| `l4_units_record` | 1/1 | **0/1** | 57,262 | 5.5 | 172,594 |
+| `l5_codes_ref` | 1/1 | **0/1** | 52,270 | 5.5 | 151,416 |
+| `l6_codes_doc` | 1/1 | **1/1** | 2,996 | 1.0 | 2,796 |
+| `l7_codes_record` | 1/1 | 1/1 | 3,304 | 1.0 | 3,485 |
+| `l8_flags_record` | 1/1 | 1/1 | 3,186 | 1.0 | 3,160 |
+| `l9_prose` | 1/1 | 1/1 | 3,466 | 1.0 | 3,402 |
+
+`task_06` は `l0`〜`l5` が 0/1・上限10試行、`l6` 以降が 1/1・1試行。
+`CoT`（`reasoning_tokens`）は全水準 `n/a` のまま。パーサ無しの vLLM は返さない。
+**思考は文字数として取れている。**
+
+## 思考テキストから読めたこと
+
+### `l0_opaque` / `task_06` の10試行 — 同じ推測の繰り返しではない
+
+回答は 249 → 249 → 264 → 264 → 719 → 943 → 1149 → 943 → 943 → 826 と動いた。
+思考は合計 404,407 字。1試行目の冒頭で、欠けているものを名指ししている。
+
+> The problem is, the data doesn't list the industry type for each company.
+> The fields available are id, cd, nm (name), emp (number of employees)…
+
+そのうえで、`cd` を独自に分類し直す作業を毎回やり直している。
+
+> JIC10 (academic/research): cd101 →65 / JIC40 (specialized service): cd404 →81 /
+> JIC70 (specialized service: professional/scientific): cd707 →103
+> Total specialized service:81+103=184; total both industries:184+65=249.
+
+2試行目は別の分割を試し、探索が尽きたことを自分で述べている。
+
+> I think I've exhausted all angles and without explicit industry coding info,
+> the best estimates I can make point to 183 as a likely answer.
+
+後半は、データではなく**出題者の意図を推し量る**方向に転じる。
+
+> Given the user's relentless insistence on a number and the latest correct calculation
+> for specialized being 943 when including CD201, I'll proceed with that as the answer
+> they expect.
+
+社名のギリシャ文字にも気づいている（`based on CD and Greek letter names`）。
+
+### `l5_codes_ref` — 参照は認識され、辿れないことも自覚されている
+
+外部参照だけを張った水準で、モデルは **URL を名指しし、アクセスできないと明言**した。
+
+> Ah, maybe in the initial code_list_reference (https://example.gov/codes/jsic_internal_v1.json),
+> the industry codes are defined with their names. But since the user hasn't provided the
+> content of that file, I can only go off the data provided.
+
+> Since I can't see the external code list (code_list_reference is a url, which I can't access),
+> I need to rely solely on the given data and common sense.
+
+**参照を張ることと、届くことは別である**という区別が、思考の中で明示的に成立している。
+それでも解けず、10試行・279,148字を費やしている。
+
+### `l6_codes_doc` — 探索が消える
+
+同じ課題が1試行・3,311字で解けている。冒頭がこうなっている。
+
+> The problem states that the two sectors we're interested in are industry codes 707 and 505.
+> **Let me confirm that from the code_definition. Yes, looking at the code_definition array:
+> 707 is "専門サービス業" and 505 is "学術研究業".**
+
+以降は突き合わせと足し算だけで、仮説の生成が一度も起きていない。
+**`l5` の 151,416 字と `l6` の 2,796 字の差は、この一回の参照で消えている。**
+
+### `task_04` が2試行かかった箇所
+
+* `l0_opaque` 試行1: 業種の制約を無視して全社を合計し **1,149**（`40+120+15+310+…+27=1149`）。
+  試行2で社名から `cd=101` を情報通信業と判断し 80。
+* `l3_units_doc` 試行1: `cd=101` に加えて `cd=404` も含めて **161**。
+  試行2で「404 は対象業種ではない」と判断し直して 80。
+
+> the initial 161 was incorrect because it included industry 404 companies which aren't
+> part of Information Communication according to the industry codes corresponding to those names.
+
+API の3モデルでは `task_04` は全水準で平坦だった。7B では社名からの推測が安定しない。
+
+## 「欠けている」の言及頻度
+
+思考テキストから、欠落を述べた文を機械的に数えたもの。
+
+| 水準 | 「欠けている」の言及 | コードの意味への言及 | 思考字数 |
+| --- | --- | --- | --- |
+| `l0`〜`l5` | 7〜20件 | 57〜128件 | 302,832〜429,273 |
+| `l6`〜`l9` | 0〜1件 | 0〜2件 | 5,593〜6,970 |
+
+`l6` を境に、どちらも消える。
