@@ -39,9 +39,21 @@
 - TokenPowerBench
   https://arxiv.org/abs/2512.03024
 
+## オープンソースAIの定義
+
+- Open Source Initiative「The Open Source AI Definition 1.0」
+  https://opensource.org/ai/open-source-ai-definition
+  第5節で参照。重みだけでなく、学習に用いたデータの情報と学習コードを、同等のシステムを再構築できる程度に開示することを求める定義。本稿では、この定義を満たす系統と、重みのみ公開の系統（オープンウェイト）を区別しています。
+
 ## 測定に用いたモデルと環境
 
-第5節の測定は OpenAI の gpt-4o-mini / gpt-4.1-mini / gpt-5.4 を用いました。実行時の指紋（入力データ・プロンプト・サンプリング設定・コードのハッシュ）はすべて結果ファイルに記録しています。再現手順は [`benchmark/`](../benchmark/) を参照してください。
+第5節の測定は、API経由の OpenAI gpt-4o-mini / gpt-4.1-mini / gpt-5.4 と、自前で回した Allen Institute for AI の Olmo-3-7B-Think を用いました。
+
+- allenai/Olmo-3-7B-Think
+  https://huggingface.co/allenai/Olmo-3-7B-Think
+  学習データ（Dolci）と学習コードが公開されており、上記の Open Source AI Definition を満たす系統。vLLM で自前で回すことで、中間推論（`<think>`）のテキストが取得できます。
+
+実行時の指紋（入力データ・プロンプト・サンプリング設定・コードのハッシュ）はすべて結果ファイルに記録しています。再現手順は [`benchmark/`](../benchmark/) を参照してください。
 
 ## 記載の方針
 

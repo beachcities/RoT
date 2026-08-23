@@ -39,9 +39,21 @@ Referenced in Section 3 as "proposals for how to measure are plentiful." Each me
 - TokenPowerBench
   https://arxiv.org/abs/2512.03024
 
+## Definition of open source AI
+
+- Open Source Initiative, "The Open Source AI Definition 1.0"
+  https://opensource.org/ai/open-source-ai-definition
+  Referenced in Section 5: a definition requiring not only weights but information about the training data and the training code, sufficient for a skilled person to rebuild a substantially equivalent system. This paper distinguishes lines that meet this definition from those that publish weights alone.
+
 ## Models and environment used for measurement
 
-The measurements in Section 5 used OpenAI's gpt-4o-mini, gpt-4.1-mini, and gpt-5.4. Fingerprints of each run — input data, prompt, sampling settings, and code hashes — are recorded in the result files. Reproduction steps are in [`benchmark/`](../benchmark/).
+The measurements in Section 5 used OpenAI's gpt-4o-mini, gpt-4.1-mini, and gpt-5.4 through an API, together with the Allen Institute for AI's Olmo-3-7B-Think served locally.
+
+- allenai/Olmo-3-7B-Think
+  https://huggingface.co/allenai/Olmo-3-7B-Think
+  Training data (Dolci) and training code are published, satisfying the Open Source AI Definition above. Serving it locally with vLLM makes the contents of the intermediate reasoning (`<think>`) available as text.
+
+Fingerprints of each run — input data, prompt, sampling settings, and code hashes — are recorded in the result files. Reproduction steps are in [`benchmark/`](../benchmark/).
 
 ## Citation policy
 
