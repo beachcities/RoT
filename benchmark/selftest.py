@@ -30,22 +30,28 @@ def check(name):
 SUITE = rb.SUITE
 
 
-def load(condition, suite=None):
+def load(condition=None, suite=None):
+    """条件を1つ取り出す。組によって条件名が違うので、無ければ先頭を使う。
+
+    ここでの検査は記録のされ方についてのもので、どの条件かは問わない。
+    """
     tasks, conditions, _ = rb.load_suite(suite or SUITE)
-    return tasks, conditions[condition]
+    if condition not in conditions:
+        condition = next(iter(conditions))
+    return tasks, conditions[condition], condition
 
 
-def run(model, condition="raw", max_attempts=3, suite=None):
+def run(model, condition=None, max_attempts=3, suite=None):
     """モックで1セル走らせて結果行を返す。"""
     client = rb.build_client(mock=True)
-    tasks, data = load(condition, suite)
+    tasks, data, condition = load(condition, suite)
     return rb.run_task(client, model, condition, data, tasks[0], max_attempts)
 
 
-def run_repeats(model, condition="raw", repeats=5, max_attempts=3, suite=None):
+def run_repeats(model, condition=None, repeats=5, max_attempts=3, suite=None):
     """同じクライアントで反復させる。ランナーの反復ループと同じ形。"""
     client = rb.build_client(mock=True)
-    tasks, data = load(condition, suite)
+    tasks, data, condition = load(condition, suite)
     return [
         rb.run_task(client, model, condition, data, tasks[0], max_attempts, repeat)
         for repeat in range(1, repeats + 1)
@@ -251,10 +257,11 @@ def _():
 # --- 全シナリオの網羅 ----------------------------------------------------
 
 
-@check("全シナリオが両条件で例外なく完走する")
+@check("全シナリオが最下位と最上位の条件で例外なく完走する")
 def _():
+    conditions = list(rb.load_suite(SUITE)[1])
     for model in SCENARIOS:
-        for condition in ("raw", "self_descriptive"):
+        for condition in (conditions[0], conditions[-1]):
             r = run(model, condition)
             assert r["status"] in ("ok", "error"), (model, condition, r["status"])
             assert r["model"] == model and r["condition"] == condition
@@ -347,10 +354,9 @@ def _():
 @check("記録: 受け付けられないサンプリング設定は落として理由を残す")
 def _():
     sampling = {"requested": rb.sampling_params(), "used": rb.sampling_params(), "dropped": {}}
-    tasks, data = load("raw" if "raw" in rb.load_suite(SUITE)[1] else
-                       next(iter(rb.load_suite(SUITE)[1])))
+    tasks, data, condition = load()
     client = rb.build_client(mock=True)
-    r = rb.run_task(client, "mock-no-temperature", "raw", data, tasks[0], 1, 1, None, sampling)
+    r = rb.run_task(client, "mock-no-temperature", condition, data, tasks[0], 1, 1, None, sampling)
     assert r["status"] == "ok", r["error"]
     assert set(sampling["dropped"]) == {"temperature", "seed"}, sampling["dropped"]
     assert set(sampling["used"]) == {"top_p"}, sampling["used"]

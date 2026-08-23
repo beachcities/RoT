@@ -113,7 +113,7 @@ REQUEST_TIMEOUT = env_int("REQUEST_TIMEOUT", 120)
 MAX_RETRIES = env_int("MAX_RETRIES", 2)
 # データとタスクの組。組ごとに raw / self_descriptive / tasks が揃っている。
 # どの組を使ったかは結果JSONに残す。組が違えば数値は比較できない。
-SUITE = os.getenv("SUITE", "v2d_tax")
+SUITE = os.getenv("SUITE", "v3_levels")
 
 
 def env_float(name, default):

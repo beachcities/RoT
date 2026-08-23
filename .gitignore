@@ -1,6 +1,12 @@
-# 実行結果（生成物。実測値はリポジトリに含めない）
-benchmark/results/
-results/
+# 実行結果。作業中のランは含めない。
+# 公開するのは results/reference/ だけ（何を出すかは analysis/RESULTS_PUBLICATION.md の案F、
+# 書き出しは benchmark/export_reference.py）。親ディレクトリごと除外すると git が中を見に
+# 行かないので、直下を除外してから reference/ を戻す。
+benchmark/results/*
+!benchmark/results/reference/
+# 図は結果ファイルから再生成できる（plot_levels.py）。公開物には含めない。
+benchmark/results/reference/*.png
+/results/
 
 # 認証情報
 .env
