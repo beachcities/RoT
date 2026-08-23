@@ -85,7 +85,7 @@ Connecting ROT to macroeconomic value-added statistics leaves substantial proble
 
 The greatest leverage on ROT, I believe, lies in the **self-description** of data — the degree to which data carries its own meaning, units, and definitions, so that a reader need not infer them.
 
-A note on terminology. In data engineering, "self-describing" usually denotes formats that embed their own schema. What this paper means is broader and more demanding: that the meaning, units, and definitions a task requires are *reachable from where the consumer stands*. A schema is one means to that end, not the end itself. A reference to an external schema that the consumer does not resolve leaves the data no more self-describing than before. The question is not which format was used but whether the required information is present and reachable.
+A note on terminology. In data engineering, "self-describing" usually denotes formats that embed their own schema (JSON, Parquet, Avro and the like). What this paper means is broader and more demanding: that the meaning, units, and definitions a task requires are *reachable from where the consumer stands*. A schema is one means to that end, not the end itself. A reference to an external schema that the consumer does not resolve leaves the data no more self-describing than before. The question is not which format was used but whether the required information is present and reachable.
 
 With that understood, self-description governs, from the outside, the effectiveness of optimisation measures in the upper layers of the stack.
 
@@ -120,6 +120,8 @@ A task requiring the meaning of a code — designed so it cannot be guessed — 
 (Median total tokens; five repetitions per cell)
 
 At levels where the required information was absent from the document, all three models failed **every single time** (0/30), running to the ten-attempt ceiling. At the level where it was present, all three solved it **on the first attempt** (5/5), and consumption fell by a factor of 14 to 29. The boundary appears as a step, not a gradient.
+
+That the level carrying only an external reference (l5) fell on the same side as stating nothing at all bears on the distinction drawn in the previous section. Pointing at a schema and reaching it are not the same thing.
 
 As a control, the same run included a task solvable by inference from company names even when nothing was stated. All three models solved it at every level, with no step in consumption. **Where a clue exists, the model gets there without being told.** Conversely, the boundary appears only where the missing information cannot be inferred.
 
