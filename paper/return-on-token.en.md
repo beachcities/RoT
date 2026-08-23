@@ -109,21 +109,76 @@ When the model fails, it is told to reconsider its premises and retry, up to ten
 
 ### Result: consumption drops by an order of magnitude at the level where the needed information appears in the document
 
-A task requiring the meaning of a code — designed so it cannot be guessed — was measured across three models.
+A task requiring the meaning of a code — designed so it cannot be guessed — was measured across four models.
 
 | Model | l5 (external reference only) | l6 (stated in document) | Ratio | Correct at l0–l5 |
 | --- | --- | --- | --- | --- |
 | gpt-4o-mini | 51,631 | 2,205 | 23.4 | 0/30 |
 | gpt-4.1-mini | 62,885 | 2,146 | 29.3 | 0/30 |
 | gpt-5.4 | 30,288 | 2,084 | 14.5 | 0/30 |
+| Olmo-3-7B-Think | 96,670 | 3,196 | 30.2 | 0/6 |
 
-(Median total tokens; five repetitions per cell)
+(Median total tokens; five repetitions per cell for the first three models, one for Olmo)
 
-At levels where the required information was absent from the document, all three models failed **every single time** (0/30), running to the ten-attempt ceiling. At the level where it was present, all three solved it **on the first attempt** (5/5), and consumption fell by a factor of 14 to 29. The boundary appears as a step, not a gradient.
+For every model, at levels where the required information was absent from the document, the task was **never once solved**, and every attempt ran to the ten-attempt ceiling. At the level where it was present, all of them solved it **on the first attempt**, and consumption fell by a factor of 14 to 30. The boundary appears as a step, not a gradient.
 
 That the level carrying only an external reference (l5) fell on the same side as stating nothing at all bears on the distinction drawn in the previous section. Pointing at a schema and reaching it are not the same thing.
 
-As a control, the same run included a task solvable by inference from company names even when nothing was stated. All three models solved it at every level, with no step in consumption. **Where a clue exists, the model gets there without being told.** Conversely, the boundary appears only where the missing information cannot be inferred.
+As a control, the same runs included a task solvable by inference from company names even when nothing was stated. Every model solved it at every level, with no substantial step in consumption. **Where a clue exists, the model gets there without being told.** Conversely, the boundary appears only where the missing information cannot be inferred.
+
+### Reading the Search Itself
+
+The first three models were measured through an API, which returned `reasoning_tokens` as zero. One could see that the reasoning had been long, but not what it consisted of.
+
+The fourth, Olmo-3-7B-Think, comes from Ai2's line, which publishes its training data (Dolci) as well as its weights and satisfies the OSI's Open Source AI Definition. Served locally with vLLM, the contents of `<think>` remain as text.
+
+**At the level carrying only an external reference (l5), the model notices the reference and is aware that it cannot resolve it.**
+
+> Ah, maybe in the initial code_list_reference (https://example.gov/codes/jsic_internal_v1.json), the industry codes are defined with their names. But since the user hasn't provided the content of that file, I can only go off the data provided.
+
+> Since I can't see the external code list (code_list_reference is a url, which I can't access), I need to rely solely on the given data and common sense.
+
+Aware of this, it nonetheless spent ten attempts and 279,148 characters continuing to guess. The difference between pointing at a reference and reaching it shows up not only as a step in the numbers but in the model's own words.
+
+**At the level stating nothing (l0), the model names what is missing at the outset, then rebuilds its own classification from scratch on every attempt.**
+
+> The problem is, the data doesn't list the industry type for each company. The fields available are id, cd, nm (name), emp (number of employees)…
+
+Across ten attempts the answers moved 249 → 249 → 264 → 264 → 719 → 943 → 1149 → 943 → 943 → 826 — not the same guess repeated. The reasoning totalled 404,407 characters. Partway through, the model states that it has exhausted its angles, and the later attempts turn away from the data toward inferring what the questioner expects.
+
+> I think I've exhausted all angles and without explicit industry coding info, the best estimates I can make point to 183 as a likely answer.
+
+**At the level where the meaning of the codes is stated in the document (l6), the search disappears entirely.**
+
+> The problem states that the two sectors we're interested in are industry codes 707 and 505. Let me confirm that from the code_definition. Yes, looking at the code_definition array: 707 is "専門サービス業" and 505 is "学術研究業".
+
+What follows is matching and addition, with not a single hypothesis generated. The gap between 151,416 characters at l5 and 2,796 at l6 closes on that one lookup.
+
+Checking this against a model whose reasoning can be read suggests that ROT behaves much as expected. Where the boundary stands, and what happens on either side of it, became visible as a mechanism and not only as a number.
+
+Whether the reasoning can be read, though, is a matter of how one verifies, not of where the indicator applies. Total tokens per outcome can be measured on any model; the first three models above yielded the boundary and the step perfectly well. What could not be read was the breakdown.
+
+And there is no reason to suppose that the mechanism observed here — search expanding as the model gropes for a correspondence that was never stated, and collapsing the moment it is — occurs only inside models one can open. Given the same task, the same shape of consumption appeared. What closed reasoning costs is not the measurement but the attribution: it becomes harder to say where the tokens went.
+
+### The Derivation from Operational Logs Actually Ran
+
+Section 6 sets out, as a hypothesis, the idea of working backwards from logs to a requirements specification. Against this reasoning text, it could be tried.
+
+The procedure has four stages. Extract, from the reasoning of failed attempts, the sentences that state something is missing. Group them by which field is said to be absent. Write the groups out as requirements. Then, at the level where that description was added, check with the same extractor whether the mentions disappear.
+
+The extracted sentences read as requirements almost verbatim.
+
+> The problem is the data doesn't have an explicit column indicating the industry. (l0)
+>
+> The unit definition doesn't list what each industry code means. (l3)
+>
+> The problem is that the data doesn't have explicit labels explaining what each industry code means. (l5)
+
+Grouped, they came to: the meaning of industry codes (31), the meaning of activity status (20), and resolving the external reference (7). Mentions of units came to zero — these two tasks do not require units. The derivation, in other words, tracks what the task actually needs.
+
+The fourth stage then served as its own verification. Mentions numbered 14–24 at l0–l5 and 0–1 at l6–l9. At the level where the meaning of the codes was added, they vanish.
+
+Two caveats. The grouping is lexical, and 43 of the 101 sentences went unclassified. And because the later attempts turn toward inferring what the questioner expects, the sentences generated there are not requirements. Applying this to real operational logs would mean using only what precedes that turn — but where to draw the line has not been measured. The procedure is in [`benchmark/derive_requirements.py`](../benchmark/derive_requirements.py).
 
 ### Traps on the Measuring Side
 
@@ -137,11 +192,11 @@ Seven identifiers have now been enumerated and closed, but there is no way to sh
 
 ### What Was Not Measured
 
-- **The CoT breakdown was not obtained.** All three models returned `reasoning_tokens` as zero, so the length of intermediate reasoning could not be separated out. The "collapse of the search loop" in Section 4 was confirmed in total tokens and attempt counts, but not as a reduction in CoT.
+- **CoT token counts were not obtained.** The three API models returned `reasoning_tokens` as zero, and the locally served Olmo returns no count either, having been run without a reasoning parser. The contents were captured as text, so character counts are comparable — but characters are not a substitute for tokens, and no estimate has been used to fill the gap.
 - **Cache efficiency (L3) was not measured.**
-- **This indicator cannot read differences in effect by model capability.** The size of the step (23.4 / 29.3 / 14.5) does not follow model capability; it tracks the length of the response at the ceiling (44,556 / 64,001 / 27,712). The step is a ratio of "ten attempts to one," so it is determined by the ceiling setting and the response length. The hypothesis that lighter models benefit more from self-description is therefore not refuted but **unanswerable by this measurement**. A different indicator is needed.
+- **This indicator cannot read differences in effect by model capability.** The size of the step (23.4 / 29.3 / 14.5 / 30.2) does not follow model capability; it tracks the length of the response at the ceiling. The step is a ratio of "ten attempts to one," so it is determined by the ceiling setting and the response length. The hypothesis that lighter models benefit more from self-description is therefore not refuted but **unanswerable by this measurement**. A different indicator is needed.
 - **The training side was not measured.** As noted at the end of Section 4, self-description should tell there too, but every measurement here concerns inference.
-- **Two tasks, three models, synthetic toy data.** Whether the same shape holds for real data or other tasks has not been measured.
+- **Two tasks, synthetic toy data.** Whether the same shape holds for real data or other tasks has not been measured. The Olmo run used a single repetition, so variance across levels could not be assessed either.
 
 ---
 
@@ -149,7 +204,7 @@ Seven identifiers have now been enumerated and closed, but there is no way to sh
 
 Adopting ROT as an indicator opens a way to shift how data is prepared: from conformance to a standard defined in advance, to investment guided by what operation actually measures.
 
-Read backwards, the log of recursive tokens an agent spent filling in missing context — the CoT that ran long, the retries that repeated, the schema definitions it queried — can serve as a requirements specification for what the data ought to have stated.
+Read backwards, the log of recursive tokens an agent spent filling in missing context — the CoT that ran long, the retries that repeated, the schema definitions it queried — can serve as a requirements specification for what the data ought to have stated. Section 5 reports what happened when this derivation was tried against toy data.
 
 > **Investment priority = number of references × tokens saved per reference**
 
@@ -173,7 +228,7 @@ This argument connects, unavoidably, to the question of digital sovereignty.
 
 Even a lightweight open model, or a local environment with little capacity to spare for inferring missing context, should be able to complete its reasoning at a higher ROT — spending fewer wasted recursive tokens — provided the data describes itself. That means an environment can stand up in one's own hands: one that reduces dependence on large external proprietary models and handles tasks autonomously and quickly.
 
-This much is still hypothesis, not measurement. As Section 5 records, how the effect of self-description varies with model capability cannot be read from the present indicator. What was measured is that where the required information was absent from the document, all three models failed every time — the boundary appeared at the same place regardless of capability.
+This much is still hypothesis, not measurement. As Section 5 records, how the effect of self-description varies with model capability cannot be read from the present indicator. What was measured is that where the required information was absent from the document, no model solved the task even once — the boundary appeared at the same place regardless of capability.
 
 Do we lean on the compute of large models to paper over deficiencies in our data, or do we build a self-describing data foundation that draws out what smaller models can already do?
 
@@ -183,7 +238,7 @@ Reconsidering the role of open data — from simple publication toward a strateg
 
 ### Call for Collaboration
 
-Of the hypotheses set out here, the reduction of search through self-description has now received a first measurement, reported in Section 5. The CoT reduction itself, the interaction effect for lighter models, and the derivation of metadata requirements from operational logs remain either untested or unanswerable by the present approach. The measurement framework and results are published here:
+Of the hypotheses set out here, the reduction of search through self-description, and the derivation of requirements from operational logs, have now received a first measurement, reported in Section 5. CoT token counts themselves, the interaction effect for lighter models, and reproduction on real data remain either untested or unanswerable by the present approach. The measurement framework and results are published here:
 
 **https://github.com/beachcities/RoT**
 
