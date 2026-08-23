@@ -1,0 +1,48 @@
+# References
+
+Sources cited in [`return-on-token.en.md`](return-on-token.en.md).
+
+*Japanese version: [`REFERENCES.md`](REFERENCES.md)*
+
+## Token consumption and unit-cost outlook
+
+- Gartner, "Gartner Predicts That by 2030, Performing Inference on an LLM With 1 Trillion Parameters Will Cost GenAI Providers Over 90% Less Than in 2025" (25 March 2026)
+  https://www.gartner.com/en/newsroom/press-releases/2026-03-25-gartner-predicts-that-by-2030-performing-inference-on-an-llm-with-1-trillion-parameters-will-cost-genai-providers-over-90-percent-less-than-in-2025
+  Cited in Section 3: that rising token consumption outpaces falling unit costs, so total inference costs increase; and that agentic models require 5–30 times more tokens per task than a standard chatbot.
+
+- Goldman Sachs Research, "AI Agents Forecast to Boost Tech Cash Flow as Usage Soars" (20 May 2026)
+  https://www.goldmansachs.com/insights/articles/ai-agents-forecast-to-boost-tech-cash-flow-as-usage-soars
+  Cited in Section 3: the projection that token consumption multiplies twenty-four fold between 2026 and 2030, reaching 120 quadrillion tokens a month; and that semiconductor providers are driving inference unit costs down 60–70% a year.
+
+## Token consumption with reasoning enabled
+
+- Sasha Luccioni and Boris Gamazaychikov, "AI Energy Score v2: Refreshed Leaderboard, now with Reasoning" (Hugging Face Blog, 2025)
+  https://huggingface.co/blog/sasha/ai-energy-score-v2
+  Cited in Section 1: comparing the same models with and without reasoning enabled, 300–800 times as many output tokens and 150–700 times the energy.
+
+## Compute optimisation frameworks
+
+- Tokenomics Foundation (Linux Foundation), "The Five-Layer Tokenomics Stack"
+  https://www.tokeneconomics.com/projects/the-five-layer-tokenomics-stack/
+  Referenced in Sections 3 and 4: the division whereby lower layers set unit price and upper layers set volume consumed. The L3–L5 labels used in this paper follow it.
+
+## Energy efficiency measurement frameworks
+
+Referenced in Section 3 as "proposals for how to measure are plentiful." Each measures energy per token; none addresses how many tokens were needed.
+
+- MLPerf Power (MLCommons)
+  https://arxiv.org/abs/2410.12032
+
+- AI Energy Score (Hugging Face)
+  https://huggingface.github.io/AIEnergyScore/
+
+- TokenPowerBench
+  https://arxiv.org/abs/2512.03024
+
+## Models and environment used for measurement
+
+The measurements in Section 5 used OpenAI's gpt-4o-mini, gpt-4.1-mini, and gpt-5.4. Fingerprints of each run — input data, prompt, sampling settings, and code hashes — are recorded in the result files. Reproduction steps are in [`benchmark/`](../benchmark/).
+
+## Citation policy
+
+This paper cites primary sources only: material published by the originating organisation. Figures heard secondhand, and estimates whose source cannot be shown, are not carried in the body text.
