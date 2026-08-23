@@ -436,6 +436,134 @@ def _():
     assert run_["fingerprint"]["settings"]["sampling_requested"] == rb.sampling_params()
 
 
+# --- 途中経過と再開 --------------------------------------------------------
+
+
+class _Boom(RuntimeError):
+    """途中で落ちる状況を作るための例外。"""
+
+
+def run_until_crash(argv, after):
+    """after 件だけ書けたところで落とす。落ちなければ AssertionError。"""
+    import contextlib
+    import io
+
+    real = rb.run_task
+    seen = {"n": 0}
+
+    def crashing(*a, **k):
+        seen["n"] += 1
+        if seen["n"] > after:
+            raise _Boom("模擬的な異常終了")
+        return real(*a, **k)
+
+    rb.run_task = crashing
+    saved = sys.argv
+    sys.argv = ["run_benchmark.py", *argv]
+    try:
+        with contextlib.redirect_stdout(io.StringIO()):
+            rb.main()
+    except _Boom:
+        return
+    finally:
+        rb.run_task = real
+        sys.argv = saved
+    raise AssertionError("落ちなかった")
+
+
+RESUME_ARGV = ["--mock", "--models", "mock-reasoning", "--suite", "v3_levels",
+               "--tasks", "task_04,task_06",
+               "--conditions", "l0_opaque,l1_names,l2_units_ref", "--repeats", "1"]
+
+
+@check("再開: 途中で落ちてもそこまでが残り、続きから回せる")
+def _():
+    import contextlib
+    import io
+
+    for f in rb.PARTIAL_DIR.glob("partial_*.jsonl"):
+        f.unlink()
+    run_until_crash(RESUME_ARGV, after=3)
+    partials = sorted(rb.PARTIAL_DIR.glob("partial_*.jsonl"))
+    assert len(partials) == 1, partials
+    lines = partials[0].read_text(encoding="utf-8").strip().split(chr(10))
+    assert len(lines) - 1 == 3, len(lines)      # 先頭は見出し
+
+    saved = sys.argv
+    sys.argv = ["run_benchmark.py", *RESUME_ARGV]
+    try:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            run = rb.main()
+    finally:
+        sys.argv = saved
+    assert len(run["results"]) == 6, len(run["results"])
+    assert run["resumed_trials"] == 3, run["resumed_trials"]
+    assert buf.getvalue().count("running:") == 3   # 残りだけ回した
+    keys = {(r["model"], r["condition"], r["task_id"], r["repeat"]) for r in run["results"]}
+    assert len(keys) == 6, keys
+    assert not partials[0].exists(), "完走したのに途中経過が残っている"
+
+
+@check("再開: 指紋が違う途中経過は受け付けない")
+def _():
+    try:
+        rb.load_partial(_fake_partial({"prompt": "ちがう"}), {"prompt": "本物"})
+    except SystemExit as exc:
+        assert "一致しません" in str(exc), exc
+    else:
+        raise AssertionError("指紋が違うのに受理された")
+
+
+def _fake_partial(header):
+    path = rb.PARTIAL_DIR / "partial_test.jsonl"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"header": header}, ensure_ascii=False) + chr(10),
+                    encoding="utf-8")
+    return path
+
+
+@check("再開: 壊れた行は捨てて読み進める")
+def _():
+    path = _fake_partial({"a": 1})
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(json.dumps({"model": "m", "condition": "c", "task_id": "t", "repeat": 1},
+                           ensure_ascii=False) + chr(10))
+        f.write("{壊れた行" + chr(10))
+    import contextlib
+    import io
+
+    with contextlib.redirect_stdout(io.StringIO()):
+        done = rb.load_partial(path, {"a": 1})
+    assert len(done) == 1, done
+    path.unlink()
+
+
+@check("再開: --no-save では途中経過を書かない")
+def _():
+    import contextlib
+    import io
+
+    for f in rb.PARTIAL_DIR.glob("partial_*.jsonl"):
+        f.unlink()
+    saved = sys.argv
+    sys.argv = ["run_benchmark.py", *RESUME_ARGV, "--no-save"]
+    try:
+        with contextlib.redirect_stdout(io.StringIO()):
+            rb.main()
+    finally:
+        sys.argv = saved
+    assert not list(rb.PARTIAL_DIR.glob("partial_*.jsonl"))
+
+
+@check("再開: 途中経過の置き場所は設定の指紋で決まる")
+def _():
+    a = rb.partial_path({"prompt": "x"})
+    b = rb.partial_path({"prompt": "y"})
+    assert a != b, (a, b)
+    assert a == rb.partial_path({"prompt": "x"})
+
+
 # --- 結果の同定 ------------------------------------------------------------
 
 

@@ -106,6 +106,10 @@ def summarize_condition(rows, max_attempts=None):
         "at_cap": None,
         # 生成上限に達した試行の数。試行上限（at_cap）とは別の打ち切り。
         "output_capped": None,
+        # 思考テキストの長さ。reasoning_tokens（CoT列）とは別物で、
+        # usage が内訳を返さないサーバでも本文から切り出せば取れる。
+        "thinking_chars": None,
+        "thinking_chars_dist": distribution([]),
         # タスクごとの内訳。タスクをまたいで混ぜると、難度の違う問いが1つの
         # 中央値に潰れる。
         "per_task": {},
@@ -164,6 +168,13 @@ def summarize_condition(rows, max_attempts=None):
             ),
             "output_capped": sum(
                 1 for r in usable if r.get("output_capped_attempts")
+            ),
+            "thinking_chars": (
+                sum(r["thinking_chars"] for r in usable if r.get("thinking_chars"))
+                if any(r.get("thinking_chars") for r in usable) else None
+            ),
+            "thinking_chars_dist": distribution(
+                [r["thinking_chars"] for r in usable if r.get("thinking_chars")]
             ),
             "per_task": per_task_stats(usable),
             "solved_attempts_dist": distribution(
@@ -357,6 +368,7 @@ CONDITION_COLS = [
     ("CoT", 9),
     ("出力", 9),
     ("総token", 9),
+    ("思考字数", 10),
     ("ROT/1k", 9),
 ]
 
@@ -379,6 +391,7 @@ LEVEL_COLS = [
     ("試行中央", 10),
     ("上限到達", 10),
     ("生成上限", 10),
+    ("思考字数中央", 14),
     ("ROT/1k", 9),
     ("中央値比", 10),
 ]
@@ -433,6 +446,7 @@ def render(summary):
                 cell(st["reasoning_tokens"]),
                 cell(st["output_tokens"]),
                 cell(st["total_tokens"]),
+                cell(st["thinking_chars"]),
                 cell(st["rot_per_1k"], 4),
             ]
             lines.append(row(zip(values, widths)) + note)
@@ -528,6 +542,7 @@ def render(summary):
                         "n/a" if att["median"] is None else f"{float(att['median']):.1f}",
                         cell(st["at_cap"]),
                         cell(st["output_capped"]),
+                        cell(st["thinking_chars_dist"]["median"], 0),
                         cell(st["rot_per_1k"], 4),
                         cell(ratio(tok["median"], base), 3),
                     ], widths))
@@ -590,7 +605,10 @@ def render(summary):
     lines.append("  * 総トークンの絶対値はトークナイザ依存。モデル間で比べられるのは比のみ。")
     lines.append("  * 自己記述的なデータは記述が増える分だけ入力が長くなる。総トークンの")
     lines.append("    比を見るときは、入力と生成のどちらが動いたのかを分けて見ること。")
-    lines.append("  * CoT が n/a のモデルは内訳が取れていない。総量のみの比較になる。")
+    lines.append("  * CoT 列は usage が返す reasoning_tokens。これが n/a でも、応答本文に")
+    lines.append("    <think> が残っていれば思考は取れている（思考字数の列を見ること）。")
+    lines.append("    実測: vLLM を --reasoning-parser 無しで動かすと CoT は n/a、思考字数は入る。")
+    lines.append("  * 思考字数は文字数であってトークン数ではない。CoT の代わりにはならない。")
     lines.append("  * 生成上限に達した試行は集計から外していない。到達件数は水準ごとの表の")
     lines.append("    「生成上限」列にある。上限値は fingerprint.settings.sampling_requested。")
     lines.append("  * 二山を分ける基準は success（正答したか）そのもの。解けた試行は打ち切りを")

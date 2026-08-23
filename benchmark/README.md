@@ -64,7 +64,8 @@ python export_reference.py             # results/reference/ を作り直す
 | `completion_tokens` | 生成側の合計（CoT ＋ 出力）。内訳が取れなくても必ず入る |
 | `total_tokens` | 全試行の累計（**失敗した試行を含む**） |
 | `rot_per_1k` | `success / total_tokens × 1000`（1,000トークンあたり）。算出できないときは `null` |
-| `attempt_log` | 試行ごとの応答・抽出した数値・トークン内訳 |
+| `thinking_chars` | 中間推論（`<think>`）の文字数。取れないときは `null` |
+| `attempt_log` | 試行ごとの応答・**思考のテキストそのもの**・抽出した数値・トークン内訳 |
 
 分母に失敗試行を含めるのは試論の中心的な主張によります。探索の大きさそのものが、データ側に欠けていた文脈の重さだという見方です。同じ理由から、通信が途中で失敗した場合も、そこまでに消費したトークンは捨てずに記録します（ただしその行は測定として不完全なので、集計からは除外します）。
 
@@ -346,6 +347,22 @@ python selftest.py                      # 記録のされ方を検証する（�
 
 試行ごとに、応答の**実体名**（`response_model`）・`system_fingerprint`・`finish_reason` を記録します。要求したモデル名と返ってきた実体名は別物なので、両方残します。ラン全体には `argv`・`started_at` / `finished_at` / `duration_sec`・Python と OpenAI SDK の版・**サンプリング設定**が入ります。
 
+#### 途中で落ちたとき
+
+長い実行は1試行ごとに `results/partial/` へ書き足します。**落ちてもそこまでは残り、次に同じ設定で走らせると続きから回ります。**
+
+```bash
+python run_benchmark.py --models ...     # 途中経過があれば自動で引き継ぐ
+python run_benchmark.py ... --no-resume  # 引き継がず最初から
+python run_benchmark.py ... --no-save    # 途中経過も本体も書かない
+```
+
+**置き場所のファイル名が設定の指紋そのもの**です（`partial_<digest>.jsonl`）。入力・タスク・プロンプト・サンプリング設定・`run_benchmark.py` などのコード・試行上限・反復数のどれかが変われば別のファイルになるので、**条件の違うランが混ざりません**。先頭行に指紋を書いてあり、読むときに中身でも突き合わせます。一致しなければ止まります。
+
+書き込み中に落ちて壊れた行は捨てて読み進めます。完走して本体のJSONを書き出せた時点で、途中経過は片付けます。引き継いだ件数は結果の `resumed_trials` に残ります。
+
+`results/partial/` は `.gitignore` の対象です。
+
 #### 生成上限について
 
 `MAX_OUTPUT_TOKENS` は既定では **0（送らない）** で、サーバの既定に任せます。API 経由のこれまでの測定はすべてこの状態です。
@@ -435,7 +452,8 @@ python summarize.py --json
 | `--conditions` | 走らせるデータ条件をカンマ区切りで絞る（既定は組の全条件） |
 | `--tasks` | 走らせるタスクIDをカンマ区切りで絞る（既定は全タスク） |
 | `--show-trials` | 反復1回ごとの明細を表示する（既定は30件を超えると省略。JSONには常に入る） |
-| `--no-save` | `results/` に書き出さない |
+| `--no-save` | `results/` に書き出さない（途中経過も書かない） |
+| `--no-resume` | 同じ設定の途中経過があっても使わず、最初から回す |
 
 ### 環境変数
 

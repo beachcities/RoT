@@ -26,6 +26,7 @@ import summarize
 
 BASE_DIR = Path(__file__).resolve().parent
 RESULTS_DIR = BASE_DIR / "results"
+PARTIAL_DIR = RESULTS_DIR / "partial"
 SUITES_DIR = BASE_DIR / "suites"
 
 # .env はこのファイルの隣を見る。リポジトリ直下から起動されても拾えるように。
@@ -89,6 +90,62 @@ def git_state():
         # None は「判定できなかった」。False と区別する。
         "dirty": None if status is None else bool(status),
     }
+
+
+def partial_path(fingerprint):
+    """途中経過の置き場所。**ファイル名が設定の指紋そのもの**になっている。
+
+    入力・プロンプト・サンプリング・コードのどれかが変われば別のファイルになるので、
+    違う条件のランが混ざることがない。再開の可否を別途判定する必要もない。
+    """
+    return PARTIAL_DIR / f"partial_{digest(fingerprint)}.jsonl"
+
+
+def trial_key(result):
+    return (result["model"], result["condition"], result["task_id"], result["repeat"])
+
+
+def load_partial(path, fingerprint):
+    """途中経過を読む。無ければ空。
+
+    先頭行に指紋を書いてあるので、ファイル名の一致に加えて中身でも突き合わせる。
+    壊れた行（書き込み中に落ちた場合の最終行など）は捨てる。
+    """
+    if not path.is_file():
+        return []
+    done = []
+    with open(path, encoding="utf-8") as f:
+        for i, line in enumerate(f):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                print(f"  途中経過の {i + 1} 行目が壊れていたので捨てた")
+                continue
+            if i == 0:
+                if row.get("header") != fingerprint:
+                    raise SystemExit(
+                        f"途中経過 {path.name} の指紋が現在の設定と一致しません。"
+                        "別の条件のランです。--no-resume で新しく始めるか、"
+                        "そのファイルを退けてください。"
+                    )
+                continue
+            done.append(row)
+    return done
+
+
+def append_partial(path, fingerprint, result):
+    """1試行ぶんを書き足す。落ちてもここまでは残る。"""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    new = not path.is_file()
+    with open(path, "a", encoding="utf-8") as f:
+        if new:
+            f.write(json.dumps({"header": fingerprint}, ensure_ascii=False) + chr(10))
+        f.write(json.dumps(result, ensure_ascii=False) + chr(10))
+        f.flush()
+        os.fsync(f.fileno())
 
 
 def env_int(name, default):
@@ -595,6 +652,11 @@ def parse_args():
         help="反復1回ごとの明細を表示する（既定は件数が多いと省略。JSONには常に入る）",
     )
     parser.add_argument("--no-save", action="store_true", help="results/ に書き出さない")
+    parser.add_argument(
+        "--no-resume",
+        action="store_true",
+        help="同じ設定の途中経過があっても使わず、最初から回す",
+    )
     return parser.parse_args()
 
 
@@ -661,44 +723,10 @@ def main():
         f"{cells} セル x 反復 {repeats} 回 = {cells * repeats} 回の実行"
     )
 
-    started_at = datetime.now(timezone.utc)
-    results = []
-    # サンプリング設定はモデルごとに持つ。受け付けないパラメータがあれば
-    # そのモデルの分だけ落ちる。何が落ちたかはランごとに残す。
-    sampling_by_model = {
-        m: {"requested": sampling_params(), "used": sampling_params(), "dropped": {}}
-        for m in models
-    }
-    for model in models:
-        for condition, data in conditions.items():
-            for task in tasks:
-                for repeat in range(1, repeats + 1):
-                    print(
-                        f"running: {model} / {condition} / {task['task_id']}"
-                        f" [{repeat}/{repeats}]"
-                    )
-                    result = run_task(
-                        client, model, condition, data, task, max_attempts, repeat, prompts,
-                        sampling_by_model[model],
-                    )
-                    if result["status"] == "error":
-                        print(f"  error: {result['error']}")
-                    elif not result["tokens_measured"]:
-                        print("  warning: usage が返らないためトークンを計測できていません")
-                    results.append(result)
-
-    print()
-    if args.show_trials or len(results) <= TRIAL_TABLE_LIMIT:
-        print_trial_table(results)
-    else:
-        print(
-            f"反復ごとの明細 {len(results)} 件は省略した（--show-trials で表示）。"
-            "JSONには常に入っている。"
-        )
-
     # 結果ファイルだけを見て、どの入力で出たものか分かるようにする。
     # 指紋は突き合わせ用、inputs は中身そのもの（組は編集されるので、名前だけでは
-    # 同じ入力だったことを保証できない）。
+    # 同じ入力だったことを保証できない）。ループの前に作るのは、途中経過の
+    # 置き場所を指紋から決めるため。
     inputs = {"tasks": tasks, "conditions": conditions, "condition_spec": condition_spec}
     fingerprint = {
         "algorithm": f"sha256[:{FINGERPRINT_BITS}] of compact JSON",
@@ -709,6 +737,7 @@ def main():
         "inputs": digest(inputs),
         "prompt_set": prompt_set,
         "prompt": digest([prompts["prompt"], prompts["retry"]]),
+        "models": models,
         "code": {
             "run_benchmark.py": file_digest(BASE_DIR / "run_benchmark.py"),
             "summarize.py": file_digest(BASE_DIR / "summarize.py"),
@@ -725,6 +754,63 @@ def main():
         "sampling": digest(sampling_params()),
     }
 
+    # 途中経過。1試行ごとに書き足すので、落ちてもそこまでは残る。
+    # 保存しない指定のときは何も書かない。
+    checkpoint = None if args.no_save else partial_path(fingerprint)
+    resumed = []
+    if checkpoint is not None and not args.no_resume:
+        resumed = load_partial(checkpoint, fingerprint)
+        if resumed:
+            print(f"途中経過 {checkpoint.name} から {len(resumed)} 件を引き継ぐ")
+    by_key = {trial_key(r): r for r in resumed}
+    reused = 0
+
+    started_at = datetime.now(timezone.utc)
+    results = []
+    # サンプリング設定はモデルごとに持つ。受け付けないパラメータがあれば
+    # そのモデルの分だけ落ちる。何が落ちたかはランごとに残す。
+    sampling_by_model = {
+        m: {"requested": sampling_params(), "used": sampling_params(), "dropped": {}}
+        for m in models
+    }
+    for model in models:
+        for condition, data in conditions.items():
+            for task in tasks:
+                for repeat in range(1, repeats + 1):
+                    key = (model, condition, task["task_id"], repeat)
+                    if key in by_key:
+                        results.append(by_key[key])
+                        reused += 1
+                        continue
+                    print(
+                        f"running: {model} / {condition} / {task['task_id']}"
+                        f" [{repeat}/{repeats}]"
+                    )
+                    result = run_task(
+                        client, model, condition, data, task, max_attempts, repeat, prompts,
+                        sampling_by_model[model],
+                    )
+                    if result["status"] == "error":
+                        print(f"  error: {result['error']}")
+                    elif not result["tokens_measured"]:
+                        print("  warning: usage が返らないためトークンを計測できていません")
+                    if checkpoint is not None:
+                        append_partial(checkpoint, fingerprint, result)
+                    results.append(result)
+
+    if reused:
+        print(f"（{reused} 件は途中経過から引き継いだもの。新しく回したのは "
+              f"{len(results) - reused} 件）")
+
+    print()
+    if args.show_trials or len(results) <= TRIAL_TABLE_LIMIT:
+        print_trial_table(results)
+    else:
+        print(
+            f"反復ごとの明細 {len(results)} 件は省略した（--show-trials で表示）。"
+            "JSONには常に入っている。"
+        )
+
     finished_at = datetime.now(timezone.utc)
     run = {
         "run_at": started_at.strftime("%Y%m%dT%H%M%SZ"),
@@ -732,6 +818,8 @@ def main():
         "finished_at": finished_at.isoformat(),
         "duration_sec": round((finished_at - started_at).total_seconds(), 1),
         "argv": sys.argv,
+        # 途中経過から引き継いだ件数。0 なら一度で通したラン。
+        "resumed_trials": reused,
         "environment": {
             "python": sys.version.split()[0],
             "openai_sdk": sdk_version(),
@@ -772,6 +860,10 @@ def main():
         with open(out_path, "w", encoding="utf-8") as f:
             json.dump(run, f, ensure_ascii=False, indent=2)
         print(f"\nsaved: {out_path}")
+        # 完走して本体を書き出せたので、途中経過はもう要らない。
+        if checkpoint is not None and checkpoint.is_file():
+            checkpoint.unlink()
+            print(f"途中経過を片付けた: {checkpoint.name}")
 
     return run
 
