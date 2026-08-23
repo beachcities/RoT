@@ -436,6 +436,69 @@ def _():
     assert run_["fingerprint"]["settings"]["sampling_requested"] == rb.sampling_params()
 
 
+# --- 要求仕様の逆算 --------------------------------------------------------
+
+
+@check("逆算: 問いを主語にした文は落とす（課題の曖昧さであってデータの欠落ではない）")
+def _():
+    import derive_requirements as dr
+
+    keep = "The problem is, the data doesn't list the industry type for each company."
+    drop = "The question doesn't specify whether to include closed companies in the total."
+    assert dr.extract(keep) == [keep], dr.extract(keep)
+    assert dr.extract(drop) == [], dr.extract(drop)
+
+
+@check("逆算: 中身の話は落とす（記述の欠落だけを採る）")
+def _():
+    import derive_requirements as dr
+
+    # 「その業種の企業が入っていない」はデータの中身についての観察で、要求仕様にならない
+    drop = "Unfortunately the dataset doesn't have any companies in the academic research sector."
+    assert dr.extract(drop) == [], dr.extract(drop)
+    keep = "But the dataset doesn't have explicit labels for these industries anywhere."
+    assert dr.extract(keep) == [keep], dr.extract(keep)
+
+
+@check("逆算: 束ねは先勝ちではなく一致数で決める")
+def _():
+    import derive_requirements as dr
+
+    # 「外部」の語が1つ入っているだけで external_reference に持っていかれてはいけない。
+    # 実測でこの誤分類が起きていた。
+    s = ("Since I can't access external data, the mapping of industry codes to "
+         "industry names and what each code means is still missing.")
+    assert dr.bucket(s) == "industry_code_meaning", dr.bucket(s)
+    # 素直に外部参照を指す文はそちらに入る
+    t = "The schema at code_list_reference is not included, so the definitions are unavailable."
+    assert dr.bucket(t) == "external_reference", dr.bucket(t)
+
+
+@check("逆算: 見出しと根拠の文が同じ束から出ている")
+def _():
+    import derive_requirements as dr
+
+    sentences = [
+        "The problem is, the data doesn't list the industry type for each company.",
+        "The schema at code_list_reference is not included, so the definitions are unavailable.",
+    ]
+    for s in sentences:
+        name = dr.bucket(s)
+        assert name is not None, s
+        # 束の正規表現が、その文に実際に当たっていること
+        pattern = next(p for k, p, _ in dr.BUCKETS if k == name)
+        assert pattern.search(s), (name, s)
+
+
+@check("逆算: 抽出器は 4 の確認でも同じものが使われる")
+def _():
+    import derive_requirements as dr
+    import inspect
+
+    src = inspect.getsource(dr.verify)
+    assert "extract(" in src, "確認の段が別の数え方をしている"
+
+
 # --- 途中経過と再開 --------------------------------------------------------
 
 

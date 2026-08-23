@@ -35,56 +35,128 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 
 # --- 1. 抽出 -------------------------------------------------------------
-# 「無い」と述べている文を拾う。文単位で切るために前後をピリオドで区切る。
+# 「無い」と述べている引き金。文全体ではなく、この語句の位置を手がかりにする。
 MISSING = re.compile(
-    r"[^.]*?(?:"
-    r"doesn't (?:list|have|specify|provide|include)"
-    r"|does not (?:list|specify|provide|include)"
-    r"|isn't (?:provided|specified|given|available)"
-    r"|is not (?:provided|specified|given|available)"
-    r"|not (?:provided|specified|given|defined) (?:here|in the data)"
-    r"|no (?:explicit|clear) (?:mapping|label|definition)"
-    r"|lack(?:s|ing)? (?:of )?(?:a )?(?:clear |explicit )?(?:mapping|definition)"
-    r"|can't (?:see|access)|cannot (?:see|access)"
-    r")[^.]*\.",
+    r"(?:doesn't|does not|didn't|did not) (?:list|have|specify|provide|include|define|contain)"
+    r"|(?:isn't|is not|aren't|are not|wasn't) (?:provided|specified|given|available|included|defined|listed)"
+    r"|no (?:explicit|clear)? ?(?:mapping|label|labels|definition|definitions|key)"
+    r"|lack(?:s|ing)? (?:of )?(?:a )?(?:clear |explicit )?(?:mapping|definition|labels?)",
     re.I,
 )
 
-# --- 2. 束ね -------------------------------------------------------------
-# 語彙で分類する。意味を読んでいるわけではない（→ 冒頭の留保）。
-BUCKETS = [
-    ("industry_code_meaning",
-     re.compile(r"industry (?:type|code|classification)|code (?:to|-)? ?industry|"
-                r"what each (?:industry )?code|code_list|jsic|業種", re.I),
-     "業種コードの意味（コード → 業種名の対応表）を、データ本体に書く"),
-    ("unit",
-     re.compile(r"\bunit\b|million|currency|単位|百万", re.I),
-     "数値の単位を、データ本体に書く"),
-    ("activity_status",
-     re.compile(r"active|closure|closed|status|活動|廃業", re.I),
-     "活動状態の意味（列挙値が何を表すか）を、データ本体に書く"),
-    ("external_reference",
-     re.compile(r"url|reference|external|schema", re.I),
-     "外部参照の先にある定義を、データ本体に取り込む"),
-]
+# 引き金の直前にある主語。ここで「何が欠けていると言っているか」の対象が決まる。
+#
+# **問いや出題者を主語にした文は落とす。** 「the question doesn't specify whether to
+# include closed companies」は課題の曖昧さであって、データ側の欠落ではない。
+# これを混ぜると、要求仕様にならない文が束に入る（実測: 101文中27文がこれだった）。
+SUBJECT_QUESTION = re.compile(
+    r"(?:the )?(?:question|problem statement|prompt|user|they|task)\s*$", re.I)
+# データを主語にした文だけを採る。「it」は直前の文を受けるので採らない。
+SUBJECT_DATA = re.compile(
+    r"(?:data|dataset|records?|schema|json|file|table|fields?|entries|"
+    r"unit_definition|code_definition|情報|データ)\W*$", re.I)
+
+SUBJECT_WINDOW = 60      # 引き金の手前をどこまで遡って主語を探すか
+
+# **記述の欠落だけを採る。** データに「その業種の企業が1件も入っていない」という話は、
+# 中身についての観察であって、自己記述性の話ではない。要求仕様にならない
+# （実測: 採った27文のうち11文がこれで、うち10文はどの束にも入らなかった）。
+# 記述を指す語が文中にあることを条件にして、中身の話を落とす。
+DOCUMENTATION = re.compile(
+    r"label|definition|mapping|key|means?|stand(?:s)? for|explain|describ"
+    r"|classification|what each|unit_definition|code_definition"
+    r"|industry (?:type|name)s?"
+    r"|意味|定義|対応表",
+    re.I,
+)
 
 
-def extract(thinking):
-    """思考テキストから「欠けている」と述べた文を返す。"""
+def sentence_around(text, pos):
+    """引き金の位置を含む1文を切り出す。"""
+    left = text.rfind(".", 0, pos) + 1
+    right = text.find(".", pos)
+    right = len(text) if right == -1 else right + 1
+    return " ".join(text[left:right].split())
+
+
+def classify_subject(text, pos):
+    """引き金の直前を見て、何が「無い」と言われているかの主語を返す。"""
+    head = text[max(0, pos - SUBJECT_WINDOW):pos]
+    if SUBJECT_QUESTION.search(head):
+        return "question"
+    if SUBJECT_DATA.search(head):
+        return "data"
+    return "other"
+
+
+def extract(thinking, keep=("data",)):
+    """データ側の欠落を述べた文だけを返す。
+
+    引き金（MISSING）を見つけ、その直前の主語で振り分ける。
+    既定ではデータを主語にした文だけを採る。
+    """
     out = []
-    for m in MISSING.finditer(thinking or ""):
-        sentence = " ".join(m.group(0).split())
+    text = thinking or ""
+    for m in MISSING.finditer(text):
+        if classify_subject(text, m.start()) not in keep:
+            continue
+        sentence = sentence_around(text, m.start())
+        if not DOCUMENTATION.search(sentence):
+            continue
         if 40 <= len(sentence) <= 400:
             out.append(sentence)
     return out
 
 
+def extract_all(thinking):
+    """主語ごとの内訳。落とした文が何だったかを数えるために使う。"""
+    counts = {"data": 0, "question": 0, "other": 0, "content_only": 0}
+    text = thinking or ""
+    for m in MISSING.finditer(text):
+        kind = classify_subject(text, m.start())
+        if kind == "data" and not DOCUMENTATION.search(sentence_around(text, m.start())):
+            kind = "content_only"
+        counts[kind] += 1
+    return counts
+
+
+# --- 2. 束ね -------------------------------------------------------------
+# **先勝ちにしない。** 一致した数で採点し、最も多い束に入れる。
+# 先勝ちにすると、たまたま先に並んでいる束の語が1つ入っただけで持っていかれる
+# （実測: コードの意味が無いと述べた文が、"external" の一語で外部参照の束に入っていた）。
+BUCKETS = [
+    ("industry_code_meaning",
+     re.compile(r"industry (?:type|code|classification|label|name)s?"
+                r"|(?:code|cd)s? (?:to|-|→)? ?industr"
+                r"|what (?:each|the) (?:industry |cd |code )?(?:code|cd)s? (?:means?|stand)"
+                r"|industry (?:labels?|mapping)|labels? for (?:these |the )?industr"
+                r"|(?:mapping|key) (?:of|for|between) .{0,20}(?:code|industr)"
+                r"|code_definition|code_list|jsic|業種", re.I),
+     "業種コードの意味（コード → 業種名の対応表）を、データ本体に書く"),
+    ("unit",
+     re.compile(r"\bunits?\b|million|currency|per (?:yen|dollar)|unit_definition|単位|百万", re.I),
+     "数値の単位を、データ本体に書く"),
+    ("activity_status",
+     re.compile(r"(?:flg|flag|activity_status|is_active)\b"
+                r"|what (?:'?Y'?|'?N'?) (?:means?|stands)"
+                r"|(?:active|closed|closure) (?:status|flag|means?)"
+                r"|活動状態|廃業", re.I),
+     "活動状態の意味（列挙値が何を表すか）を、データ本体に書く"),
+    ("external_reference",
+     re.compile(r"\bschema\b|code_list_reference|https?://|external (?:code|list|file|reference)"
+                r"|referenced? (?:file|document|url)", re.I),
+     "外部参照の先にある定義を、データ本体に取り込む"),
+]
+
+
 def bucket(sentence):
-    """1文を束に割り当てる。当てはまらなければ None。"""
+    """一致数で採点して束を決める。同点なら BUCKETS の並び順で先のものを採る。"""
+    best, best_score = None, 0
     for name, pattern, _ in BUCKETS:
-        if pattern.search(sentence):
-            return name
-    return None
+        score = len(set(m.group(0).lower() for m in pattern.finditer(sentence)))
+        if score > best_score:
+            best, best_score = name, score
+    return best
 
 
 def requirement_text(name):
@@ -170,10 +242,23 @@ def main():
     print()
 
     rows = collect(run, failed_only=not args.all_trials, first_half=args.first_half)
-    print(f"1. 抽出 — 「欠けている」と述べた文: {len(rows)} 件"
+    tally = {"data": 0, "question": 0, "other": 0, "content_only": 0}
+    for r in run["results"]:
+        if not args.all_trials and r["success"]:
+            continue
+        for a in r["attempt_log"]:
+            for k, v in extract_all(a.get("thinking")).items():
+                tally[k] += v
+    print(f"1. 抽出 — データ側の欠落を述べた文: {len(rows)} 件"
           f"（{'失敗した試行のみ' if not args.all_trials else '全試行'}"
           f"{'・各試行の前半のみ' if args.first_half else ''}）")
-    print(f"   使った正規表現: {MISSING.pattern}")
+    print(f"   引き金の総数 {sum(tally.values())} 件の内訳:")
+    print(f"     主語がデータ      {tally['data']:>4} 件  → 採る")
+    print(f"     主語が問い/出題者 {tally['question']:>4} 件  → 落とす"
+          f"（課題の曖昧さであってデータの欠落ではない）")
+    print(f"     主語が判別できず  {tally['other']:>4} 件  → 落とす")
+    print(f"     中身の話          {tally['content_only']:>4} 件  → 落とす"
+          f"（「その業種の企業が入っていない」等。記述の欠落ではない）")
     print()
 
     counts = Counter(bucket(s) for _, _, _, s in rows)

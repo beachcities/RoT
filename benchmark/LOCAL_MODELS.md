@@ -284,62 +284,107 @@ python derive_requirements.py results/reference/run_20260823T124213Z.json --show
 **4 が検証にあたる。** 抽出器を変えずに前後を数えるのが要点で、別の基準で数え直すと
 検証にならない。
 
-### 使った正規表現
+### 抽出の三段の関門
+
+引き金（下の正規表現）に当たった文を、そのまま採るのではない。**引き金の直前の主語**と、
+**記述を指す語があるか**で振り分ける。最初の版はこれをやっておらず、要求仕様にならない文が
+束に混ざっていた。
+
+| 関門 | 落とすもの | 理由 |
+| --- | --- | --- |
+| 主語が問い・出題者 | `The question doesn't specify whether to include closed companies` | 課題の曖昧さであって、データ側の欠落ではない |
+| 主語が判別できない | — | 何について言っているか決められない |
+| 記述を指す語が無い | `the dataset doesn't have any companies in the academic research sector` | データの中身についての観察であって、自己記述性の話ではない |
+
+### 引き金の正規表現
 
 ```
-[^.]*?(?:doesn't (?:list|have|specify|provide|include)
-       |does not (?:list|specify|provide|include)
-       |isn't (?:provided|specified|given|available)
-       |is not (?:provided|specified|given|available)
-       |not (?:provided|specified|given|defined) (?:here|in the data)
-       |no (?:explicit|clear) (?:mapping|label|definition)
-       |lack(?:s|ing)? (?:of )?(?:a )?(?:clear |explicit )?(?:mapping|definition)
-       |can't (?:see|access)|cannot (?:see|access))[^.]*\.
+(?:doesn't|does not|didn't|did not) (?:list|have|specify|provide|include|define|contain)
+|(?:isn't|is not|aren't|are not|wasn't) (?:provided|specified|given|available|included|defined|listed)
+|no (?:explicit|clear)? ?(?:mapping|label|labels|definition|definitions|key)
+|lack(?:s|ing)? (?:of )?(?:a )?(?:clear |explicit )?(?:mapping|definition|labels?)
 ```
 
-文単位で切るためにピリオドで区切り、40〜400字のものだけを採る。
+### 束ねは先勝ちにしない
 
-### 逆算された要求仕様（失敗した試行のみ、101件から）
+一致した語の数で採点し、最も多い束に入れる。**先勝ちにすると、たまたま先に並んでいる束の語が
+1つ入っただけで持っていかれる。** 実測で、コードの意味が無いと述べた文が `external` の一語で
+外部参照の束に入っていた。
+
+### 逆算された要求仕様（失敗した試行のみ）
+
+| 段階 | 件数 |
+| --- | --- |
+| 引き金に当たった箇所 | 191 |
+| 　主語が問い・出題者 → 落とす | 101 |
+| 　主語が判別できず → 落とす | 62 |
+| 　中身の話 → 落とす | 18 |
+| **採った文** | **10** |
 
 | 束 | 件数 | 書き出された仕様 |
 | --- | --- | --- |
-| `industry_code_meaning` | 31 | 業種コードの意味（コード → 業種名の対応表）を、データ本体に書く |
-| `activity_status` | 20 | 活動状態の意味（列挙値が何を表すか）を、データ本体に書く |
-| `external_reference` | 7 | 外部参照の先にある定義を、データ本体に取り込む |
+| `industry_code_meaning` | **9** | 業種コードの意味（コード → 業種名の対応表）を、データ本体に書く |
 | `unit` | 0 | — |
-| （分類できず） | 43 | — |
+| `activity_status` | 0 | — |
+| `external_reference` | 0 | — |
+| （分類できず） | 1 | — |
 
-`unit` が0件なのは、この2タスクが単位を必要としないため（`task_04` / `task_06` は
-従業員数を数える問い）。単位を要する `task_01`〜`03` はこのランに含めていない。
+**このランから逆算される要求仕様は1つだけである。** `unit` と `activity_status` が0件なのは、
+このランの2つの課題（`task_04` / `task_06` = 従業員数を数える問い）が、単位も活動状態も
+必要としないため。**逆算が課題に依存して動いている**ことになる。
+
+根拠の文（そのまま）:
+
+> The problem is, **the data doesn't list the industry type** for each company.
+> But **the dataset doesn't have explicit labels for these industries**.
+> Since **the data doesn't have industry labels**, I have to rely on the company names…
+> Alternatively, since **the data doesn't specify the mappings for the industry codes**…
 
 ### 4. 確認 — 水準ごとの言及件数
 
-| 水準 | 正答 | 思考字数 | 「欠けている」の言及 |
+| 水準 | 正答 | 思考字数 | 言及 |
 | --- | --- | --- | --- |
-| `l0_opaque` | 1/2 | 429,273 | 18 |
-| `l1_names` | 1/2 | 349,637 | 24 |
-| `l2_units_ref` | 1/2 | 375,674 | 17 |
-| `l3_units_doc` | 1/2 | 394,037 | 18 |
-| `l4_units_record` | 1/2 | 345,187 | 16 |
-| `l5_codes_ref` | 1/2 | 302,832 | 14 |
+| `l0_opaque` | 1/2 | 429,273 | 3 |
+| `l1_names` | 1/2 | 349,637 | 2 |
+| `l2_units_ref` | 1/2 | 375,674 | 1 |
+| `l3_units_doc` | 1/2 | 394,037 | 2 |
+| `l4_units_record` | 1/2 | 345,187 | 3 |
+| `l5_codes_ref` | 1/2 | 302,832 | 1 |
 | **`l6_codes_doc`** | **2/2** | **5,593** | **0** |
-| `l7_codes_record` | 2/2 | 6,970 | 1 |
+| `l7_codes_record` | 2/2 | 6,970 | 0 |
 | `l8_flags_record` | 2/2 | 6,321 | 0 |
 | `l9_prose` | 2/2 | 6,803 | 0 |
 
-`l6` で `code_definition`（コード → 業種名の対応表）を足したところで、言及が消えている。
-逆算された仕様の筆頭が指していたものが、まさにこれである。
+`l6` で `code_definition`（コード → 業種名の対応表）を足したところで言及が消える。
+逆算された唯一の仕様が指していたものが、まさにこれである。
 
-**先の報告で「7〜20件」と書いたのは、この場で書いた狭い正規表現による数え方だった。**
-スクリプトの正規表現は `can't see / cannot access` と `available` を含むぶん広く、
-`l0`〜`l5` で 14〜24件になる。`l6` 以降が 0〜1件である点は変わらない。
-以後はスクリプトの数え方を正とする。
+### 最初の版の欠陥（記録として残す）
+
+**見出しと、その下に並ぶ根拠の文が対応していなかった。** 表示の不具合ではなく、
+分類そのものが誤っていた。原因は二つ。
+
+1. **抽出が広すぎた。** 「the question doesn't specify…」のように**問いを主語にした文**を
+   拾っていた。これは課題の曖昧さであって、データ側の欠落ではない。101件がこれだった。
+2. **束ねが先勝ちだった。** 文中に現れた最初の束の語で決めていたため、
+   「コードの意味が書かれていない」と述べた文が、`external` の一語で外部参照の束に入っていた。
+
+その結果、最初の版は 101文 → 業種コード31件・活動状態20件・外部参照7件・未分類43件と
+報告していたが、**活動状態と外部参照の束は、この誤りが作り出したものだった**。
+直した後は 10文 → 業種コード9件・未分類1件で、**逆算される仕様は1つだけ**になる。
+
+未分類の1件は「該当する業種コードがデータに無い」という中身の話で、`classification` の語を
+含んでいたために関門をすり抜けている。
 
 ### 留保
 
 * 後半の試行では、データではなく**出題者の意図を推し量る**方向に転じる
   （実測: `the answer they expect` と書いている）。そこで生成される文は要求仕様にならない。
   `--first-half` で各試行の前半だけに絞れるが、**切り分けの基準そのものは測っていない。**
-* 束ねは語彙による分類であって、意味を読んでいるわけではない。43件が分類できていない。
+* 束ねは語彙による分類であって、意味を読んでいるわけではない。10件のうち1件が
+  分類できていない。**LLM を呼んで分類させることはしていない。** 逆算の手順そのものが
+  トークンを消費すると、何を測っているのか分からなくなる。
+* 採れた文は191件の引き金のうち10件で、**歩留まりは5%である。** 残りの大半は
+  問いを主語にした文（101件）で、これは課題の書き方の問題であってデータの問題ではない。
+  実運用のログでは、この比率が変わる可能性がある。
 * 欠落が「単一の対応表」という形をしていたから一意に落ちた可能性がある。
   別の形の欠落で同じ手順が回るかは確かめていない。
