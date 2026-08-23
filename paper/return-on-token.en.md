@@ -10,7 +10,7 @@ This is a discussion paper. It proposes Return on Token (ROT), an indicator that
 
 The acronym invites an obvious reading. Whether it applies to the indicator or to what we currently do with our tokens is, I think, the open question.
 
-Sources cited are listed in [`REFERENCES.md`](REFERENCES.md).
+Sources cited are listed in [`REFERENCES.en.md`](REFERENCES.en.md).
 
 ---
 
@@ -191,4 +191,4 @@ I would welcome feedback from researchers and practitioners on refining the expe
 
 ---
 
-Sources cited are listed in [`REFERENCES.md`](REFERENCES.md).
+Sources cited are listed in [`REFERENCES.en.md`](REFERENCES.en.md).
