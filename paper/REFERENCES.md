@@ -2,6 +2,8 @@
 
 本稿（[`return-on-token.md`](return-on-token.md)）で言及した資料の一覧です。
 
+*English version: [`REFERENCES.en.md`](REFERENCES.en.md)*
+
 ## トークン消費と単価の見通し
 
 - Gartner「Gartner Predicts That by 2030, Performing Inference on an LLM With 1 Trillion Parameters Will Cost GenAI Providers Over 90% Less Than in 2025」（2026年3月25日）
