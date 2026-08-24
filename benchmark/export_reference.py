@@ -35,6 +35,9 @@ REFERENCE = [
     "run_20260820T154458Z.json",
     # ローカルで回した推論モデル。応答本文に加えて中間推論のテキストが入る。
     "run_20260823T124213Z.json",
+    # オープンウェイトの系統を一つ。thinking の on/off を同じ入力で比べたもの。
+    "run_20260824T061642Z.json",
+    "run_20260824T034646Z.json",
 ]
 
 # 台帳の注記。機械で書けないので手で書く。キーはファイル名。
@@ -60,6 +63,12 @@ NOTES = {
                                  "allenai/Olmo-3-7B-Think（vLLM）。"
                                  "**中間推論のテキストが入る唯一のラン**。"
                                  "REPEATS=1、生成上限 32,768",
+    "run_20260824T061642Z.json": "**参照点**。Qwen/Qwen3.5-9B（vLLM、Colab CLI 経路）を "
+                                 "**thinking on** で。**オープンウェイトで学習データは非公開**、"
+                                 "OSAID は満たさない。入力は OLMo と同一",
+    "run_20260824T034646Z.json": "**参照点**。同じモデル・同じ入力を **thinking off** で"
+                                 "（`enable_thinking: false`）。on との差が直接取れる。"
+                                 "文脈長超過で4試行がエラー",
 }
 
 TRIAL_COLUMNS = [

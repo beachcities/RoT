@@ -178,6 +178,8 @@ def main():
     )
     cmd = [sys.executable, "-u", "run_benchmark.py", "--models", model,
            "--tasks", env("ROT_TASKS", "task_04,task_06")]
+    if env("ROT_CONDITIONS"):
+        cmd += ["--conditions", env("ROT_CONDITIONS")]
     log("走らせる:", " ".join(cmd), "/ THINKING=" + child_env["THINKING"])
 
     remaining = deadline - (time.time() - started)

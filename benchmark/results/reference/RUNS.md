@@ -31,6 +31,9 @@
 | `20260820T154227Z` | gpt-4o-mini | v3_levels | 1 | 2 | 10 | 10 | 17 | `2f7007300a05b1d0` | l9 の追試（l9 のみ、10反復）。以前の版で観測された崩れが再現するかを見たもの |
 | [`20260820T154458Z`](runs/20260820T154458Z.md) | gpt-5.4 | v3_levels | 10 | 2 | 5 | 10 | 17 | `dea1a8ccce8dbbad` | **参照点**。同上。gpt-5.4 |
 | [`20260823T124213Z`](runs/20260823T124213Z.md) | allenai/Olmo-3-7B-Think | v3_levels | 10 | 2 | 1 | 10 | 17 | `dea1a8ccce8dbbad` | **参照点**。同じ入力を Colab の A100 で回した allenai/Olmo-3-7B-Think（vLLM）。**中間推論のテキストが入る唯一のラン**。REPEATS=1、生成上限 32,768 |
+| [`20260824T034646Z`](runs/20260824T034646Z.md) | Qwen/Qwen3.5-9B | v3_levels | 10 | 2 | 1 | 10 | 17 | `dea1a8ccce8dbbad` | **参照点**。同じモデル・同じ入力を **thinking off** で（`enable_thinking: false`）。on との差が直接取れる。文脈長超過で4試行がエラー |
+| `20260824T045805Z` | Qwen/Qwen3.5-9B | v3_levels | 1 | 1 | 1 | 10 | 17 | `03078d22e604d4f2` |  |
+| [`20260824T061642Z`](runs/20260824T061642Z.md) | Qwen/Qwen3.5-9B | v3_levels | 10 | 2 | 1 | 10 | 17 | `dea1a8ccce8dbbad` | **参照点**。Qwen/Qwen3.5-9B（vLLM、Colab CLI 経路）を **thinking on** で。**オープンウェイトで学習データは非公開**、OSAID は満たさない。入力は OLMo と同一 |
 
 ## 応答本文まで置いてあるラン
 
@@ -41,6 +44,8 @@
 * `run_20260820T143501Z.json`
 * `run_20260820T154458Z.json`
 * `run_20260823T124213Z.json`
+* `run_20260824T061642Z.json`
+* `run_20260824T034646Z.json`
 
 他のランは `trials.csv` に試行ごとの数値だけを収めてある。応答本文は入っていないので、
 採点し直すことはできない。
