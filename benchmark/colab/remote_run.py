@@ -11,7 +11,8 @@
     ROT_MODEL         モデルID
     ROT_THINKING      on / off
     ROT_TASKS, ROT_SUITE, ROT_REPEATS, ROT_MAX_ATTEMPTS, ROT_MAX_OUTPUT_TOKENS
-    ROT_MAX_MODEL_LEN vLLM の --max-model-len
+    ROT_MAX_MODEL_LEN vLLM の --max-model-len（生成上限より大きくすること）
+    ROT_USE_LOCAL     1 なら /content/local を clone の上に被せる（未 push のコードを試すとき）
     ROT_ROUTE         実行経路の覚え書き（結果に残る）
 
 終了時に `/content/status.json` を書く。`done` が真なら完走している。
@@ -37,12 +38,38 @@ def log(*a):
     print(*a, flush=True)
 
 
+def overlay_local():
+    """手元から持ち込んだファイルを clone の上に被せる。
+
+    **push していないコードを試すための逃げ道。** 被せた結果は clone との差分として
+    残るので、`git status` が dirty を返し、指紋にもそう記録される。
+    どのコードで回したかを偽らずに済む。
+    """
+    src = "/content/local"
+    if env("ROT_USE_LOCAL") != "1" or not os.path.isdir(src):
+        return 0
+    n = 0
+    for root, _, files in os.walk(src):
+        for name in files:
+            rel = os.path.relpath(os.path.join(root, name), src)
+            dst = os.path.join(BENCH, rel)
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            with open(os.path.join(root, name), "rb") as f:
+                data = f.read()
+            with open(dst, "wb") as f:
+                f.write(data)
+            n += 1
+    log(f"手元のファイルを {n} 件被せた（clone との差分になる）")
+    return n
+
+
 def prepare():
     if not os.path.isdir("/content/RoT"):
         subprocess.run(["git", "clone", "--depth", "1", REPO, "/content/RoT"], check=True)
     commit = subprocess.run(["git", "-C", "/content/RoT", "rev-parse", "HEAD"],
                             capture_output=True, text=True).stdout.strip()
     log("commit:", commit)
+    overlay_local()
     # Colab のイメージは torch と torchaudio の CUDA 版が食い違っており、
     # vLLM の import 経路で落ちる。テキスト推論に torchaudio は要らない。
     subprocess.run([sys.executable, "-m", "pip", "uninstall", "-y", "-q", "torchaudio"])
@@ -114,10 +141,20 @@ def main():
     started = time.time()
     deadline = float(env("ROT_DEADLINE_SEC", "2700"))
     model = env("ROT_MODEL", "Qwen/Qwen3.5-9B")
+
+    # 文脈長が生成上限以下だと、プロンプトを足した時点で必ず超えて 400 になる。
+    # 実測でこれを踏み、20実行すべてがエラーになった。先に弾く。
+    max_model_len = int(env("ROT_MAX_MODEL_LEN", "65536"))
+    max_output = int(env("ROT_MAX_OUTPUT_TOKENS", "32768"))
+    if max_model_len <= max_output:
+        raise SystemExit(
+            f"--max-model-len ({max_model_len}) が生成上限 ({max_output}) 以下です。"
+            "プロンプトを足した時点で必ず超えるので、全試行が 400 になります。"
+        )
     commit = prepare()
     carried = restore_partial()
 
-    server = serve(model, env("ROT_MAX_MODEL_LEN", "32768"))
+    server = serve(model, max_model_len)
     status = {"done": False, "carried": carried, "commit": commit, "model": model,
               "gpu": gpu_name(), "result_file": None, "reason": None}
     if server is None:
@@ -135,8 +172,9 @@ def main():
         REQUEST_TIMEOUT="1800", MAX_RETRIES="2",
         RUN_ROUTE=(env("ROT_ROUTE", "Colab CLI 経路 / colab/remote_run.py")
                    + f" / GPU: {status['gpu']} / vllm serve --max-model-len "
-                   + env("ROT_MAX_MODEL_LEN", "32768")
-                   + " --gpu-memory-utilization 0.90（reasoning-parser なし）"),
+                   + str(max_model_len)
+                   + " --gpu-memory-utilization 0.90（reasoning-parser なし）"
+                   + (" / 手元のコードを被せて実行" if env("ROT_USE_LOCAL") == "1" else "")),
     )
     cmd = [sys.executable, "-u", "run_benchmark.py", "--models", model,
            "--tasks", env("ROT_TASKS", "task_04,task_06")]
@@ -163,6 +201,14 @@ def main():
         import glob
         files = sorted(glob.glob(BENCH + "/results/run_*.json"))
         status["result_file"] = files[-1] if files else None
+        # 完走しても、全試行がエラーなら測定として成立していない。数えて残す。
+        if status["result_file"]:
+            with open(status["result_file"], encoding="utf-8") as f:
+                done_run = json.load(f)
+            rows = done_run["results"]
+            status["trials"] = len(rows)
+            status["errors"] = sum(1 for r in rows if r["status"] != "ok")
+            status["thinking_mode"] = done_run.get("thinking_mode")
     json.dump(status, open("/content/status.json", "w"), ensure_ascii=False)
     log("status:", json.dumps(status, ensure_ascii=False))
 

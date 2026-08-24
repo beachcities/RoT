@@ -61,6 +61,25 @@ def colab(*args, timeout=1800, check=True):
     return out
 
 
+def ensure_dirs(session):
+    """アップロード先のディレクトリを先に作る。
+
+    `colab upload` はネストした宛先を作れず、無いと 500 を返す（実測）。
+    `/content/carry` は区間2以降で必ず使うので、毎回作っておく。
+    """
+    lines = [
+        "import os",
+        "for d in ('/content/carry', '/content/local'):",
+        "    os.makedirs(d, exist_ok=True)",
+        "print('ディレクトリを用意した')",
+    ]
+    script = BASE_DIR / "results" / ".mkdirs.py"
+    script.parent.mkdir(parents=True, exist_ok=True)
+    script.write_text(chr(10).join(lines) + chr(10), encoding="utf-8")
+    colab("exec", "-s", session, "--timeout", "120", "-f", wsl_path(script), timeout=300)
+    script.unlink(missing_ok=True)
+
+
 def carry_files():
     if not CARRY_DIR.is_dir():
         return []
@@ -72,11 +91,19 @@ def run_segment(session, args, index):
     print(f"\n=== 区間 {index} ===", flush=True)
     colab("new", "-s", session, "--gpu", args.gpu, timeout=900)
     try:
+        ensure_dirs(session)
         for f in carry_files():
             colab("upload", "-s", session, wsl_path(f), f"/content/carry/{f.name}",
                   timeout=600)
         colab("upload", "-s", session, wsl_path(REMOTE_SCRIPT), "/content/remote_run.py",
               timeout=600)
+        if args.use_local:
+            # clone は origin/main を取ってくるので、push していない変更は入らない。
+            # 実測でこれを踏み、thinking を切ったつもりが切れていなかった。
+            for name in ("run_benchmark.py", "summarize.py", "mock_client.py",
+                         "prompts.json", "count_thinking.py"):
+                colab("upload", "-s", session, wsl_path(BASE_DIR / name),
+                      f"/content/local/{name}", timeout=600)
 
         setup = (
             "import os, runpy\n"
@@ -90,6 +117,7 @@ def run_segment(session, args, index):
             f"'ROT_MAX_ATTEMPTS': '{args.max_attempts}',"
             f"'ROT_MAX_OUTPUT_TOKENS': '{args.max_output_tokens}',"
             f"'ROT_MAX_MODEL_LEN': '{args.max_model_len}',"
+            f"'ROT_USE_LOCAL': '{'1' if args.use_local else '0'}',"
             f"'ROT_ROUTE': 'Colab CLI 経路 / colab/drive_cli_run.py'}})\n"
             "runpy.run_path('/content/remote_run.py', run_name='__main__')\n"
         )
@@ -109,6 +137,9 @@ def run_segment(session, args, index):
             status_local.unlink()
         print(f"  status: {json.dumps(status, ensure_ascii=False)}", flush=True)
 
+        if status.get("errors"):
+            print(f"  ** {status['errors']}/{status['trials']} 試行がエラー。"
+                  "測定として成立していない可能性がある **", flush=True)
         if status.get("done") and status.get("result_file"):
             out = BASE_DIR / "results" / Path(status["result_file"]).name
             colab("download", "-s", session, status["result_file"], wsl_path(out), timeout=900)
@@ -137,7 +168,10 @@ def main():
     parser.add_argument("--repeats", default="1")
     parser.add_argument("--max-attempts", default="10")
     parser.add_argument("--max-output-tokens", default="32768")
-    parser.add_argument("--max-model-len", default="32768")
+    parser.add_argument("--max-model-len", default="65536",
+                        help="生成上限より大きくすること。以下だと全試行が 400 になる")
+    parser.add_argument("--use-local", action="store_true",
+                        help="push していない手元のコードを clone の上に被せて走らせる")
     parser.add_argument("--gpu", default="A100")
     parser.add_argument("--work-seconds", type=int, default=2700,
                         help="1区間で走らせる秒数。立ち上げの時間を差し引いて決める")
@@ -153,6 +187,12 @@ def main():
 
     print(f"モデル {args.model} / thinking {args.thinking} / {args.tasks}")
     print(f"1区間 {args.work_seconds}s、最大 {args.max_segments} 区間")
+    if args.use_local:
+        print("手元のコードを被せて走らせる（clone との差分になり、指紋は dirty になる）")
+    if int(args.max_model_len) <= int(args.max_output_tokens):
+        raise SystemExit(
+            f"--max-model-len ({args.max_model_len}) が --max-output-tokens "
+            f"({args.max_output_tokens}) 以下です。全試行が 400 になります。")
     if carry_files():
         print(f"引き継ぐ途中経過: {[f.name for f in carry_files()]}")
 
