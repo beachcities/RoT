@@ -47,11 +47,15 @@ Referenced in Section 3 as "proposals for how to measure are plentiful." Each me
 
 ## Models and environment used for measurement
 
-The measurements in Section 5 used OpenAI's gpt-4o-mini, gpt-4.1-mini, and gpt-5.4 through an API, together with the Allen Institute for AI's Olmo-3-7B-Think served locally.
+The measurements in Section 5 used OpenAI's gpt-4o-mini, gpt-4.1-mini, and gpt-5.4 through an API, together with the Allen Institute for AI's Olmo-3-7B-Think and Qwen3.5-9B, both served locally.
 
 - allenai/Olmo-3-7B-Think
   https://huggingface.co/allenai/Olmo-3-7B-Think
   Training data (Dolci) and training code are published, satisfying the Open Source AI Definition above. Serving it locally with vLLM makes the contents of the intermediate reasoning (`<think>`) available as text.
+
+- Qwen/Qwen3.5-9B
+  https://huggingface.co/Qwen/Qwen3.5-9B
+  Open-weight, with weights published under Apache-2.0. The training data is not published, so the line does not satisfy the Open Source AI Definition above. Served locally with vLLM and measured under two conditions, with thinking enabled and disabled (`enable_thinking`).
 
 Fingerprints of each run — input data, prompt, sampling settings, and code hashes — are recorded in the result files. Reproduction steps are in [`benchmark/`](../benchmark/).
 
