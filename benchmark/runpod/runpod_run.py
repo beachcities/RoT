@@ -81,19 +81,41 @@ def pods():
 
 
 def create(args, seconds):
-    """Pod を作る。自動終了の時刻を先に決めてから渡す。"""
-    until = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(
-        seconds=seconds + args.terminate_margin)
-    stamp = until.strftime("%Y-%m-%dT%H:%M:%SZ")
-    log(f"自動終了を {stamp} に置く（{(seconds + args.terminate_margin) / 60:.0f} 分後）")
-    raw = rp("pod", "create", "--name", args.name, "--image", args.image,
+    """Pod を作る。自動終了の時刻を先に決めてから渡す。
+
+    **在庫は出たり消えたりする。** 実測: 在庫 Low と表示されていても
+    「no longer any instances available」で断られる。GPU を掴む前なので
+    断られている間は課金されない。掴めるまで淡々と待つ。
+    """
+    for attempt in range(1, args.create_retries + 1):
+        # 期限は掴めた時刻から数える。待っている間に前へずれないよう毎回引き直す。
+        until = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(
+            seconds=seconds + args.terminate_margin)
+        stamp = until.strftime("%Y-%m-%dT%H:%M:%SZ")
+        out = subprocess.run(
+            ["runpodctl", "pod", "create", "--name", args.name, "--image", args.image,
              "--gpu-id", GPU_ID, "--cloud-type", args.cloud,
              "--container-disk-in-gb", str(args.disk),
              "--volume-in-gb", str(args.volume),
-             "--ports", "22/tcp", "--terminate-after", stamp, "-o", "json")
-    data = json.loads(raw)
-    pod = data.get("pod", data) if isinstance(data, dict) else data
-    return pod.get("id") or pod.get("podId")
+             "--ports", "22/tcp", "--terminate-after", stamp, "-o", "json"],
+            capture_output=True, text=True, env=api_env(), timeout=600)
+        text = (out.stdout or "") + (out.stderr or "")
+        if out.returncode == 0 and "error" not in text[:20]:
+            try:
+                data = json.loads(out.stdout)
+            except json.JSONDecodeError:
+                data = {}
+            pod = data.get("pod", data) if isinstance(data, dict) else data
+            pod_id = pod.get("id") or pod.get("podId")
+            if pod_id:
+                log(f"自動終了を {stamp} に置いた"
+                    f"（{(seconds + args.terminate_margin) / 60:.0f} 分後）")
+                return pod_id
+        short = text.strip().replace(chr(10), " ")[:160]
+        log(f"  [{attempt}/{args.create_retries}] 取れない: {short}")
+        if attempt < args.create_retries:
+            time.sleep(args.create_wait)
+    raise SystemExit(f"{args.create_retries} 回試して Pod を取れなかった")
 
 
 def ssh_info(pod_id, wait_sec):
@@ -212,6 +234,10 @@ def main():
                    help="push していない手元のコードを clone の上に被せる")
     p.add_argument("--terminate-margin", type=int, default=600,
                    help="自動終了を予算より何秒あとに置くか")
+    p.add_argument("--create-retries", type=int, default=60,
+                   help="Pod を取れるまで試す回数。掴む前は課金されない")
+    p.add_argument("--create-wait", type=int, default=60,
+                   help="取れなかったときに待つ秒数")
     p.add_argument("--dry-run", action="store_true", help="Pod を作らずに手順だけ出す")
     args = p.parse_args()
 
