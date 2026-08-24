@@ -156,6 +156,8 @@ Across ten attempts the answers moved 249 → 249 → 264 → 264 → 719 → 94
 
 What follows is matching and addition, with not a single hypothesis generated. The gap between 151,416 characters at l5 and 2,796 at l6 closes on that one lookup.
 
+Since characters are no substitute for tokens, the reasoning text was re-counted with the model's own tokeniser. On the same task, 69,183 tokens at l5 become 1,027 at l6. This is not a figure the server returned, however: it is an approximation obtained by counting the extracted text after the fact, and since it excludes the opening and closing tags and any special tokens, it errs low. For the three API models the method is unavailable, since no reasoning text is returned at all.
+
 Checking this against a model whose reasoning can be read suggests that ROT behaves much as expected. Where the boundary stands, and what happens on either side of it, became visible as a mechanism and not only as a number.
 
 Whether the reasoning can be read, though, is a matter of how one verifies, not of where the indicator applies. Total tokens per outcome can be measured on any model; the first three models above yielded the boundary and the step perfectly well. What could not be read was the breakdown.
@@ -202,7 +204,7 @@ Seven identifiers have now been enumerated and closed, but there is no way to sh
 
 ### What Was Not Measured
 
-- **CoT token counts were not obtained.** The three API models returned `reasoning_tokens` as zero, and the locally served Olmo returns no count either, having been run without a reasoning parser. The contents were captured as text, so character counts are comparable — but characters are not a substitute for tokens, and no estimate has been used to fill the gap.
+- **CoT token counts are available only for the locally served run.** The three API models returned `reasoning_tokens` as zero and no reasoning text either, so there is nothing to count. For the Olmo run an approximation was obtained by re-counting the extracted text with a tokeniser, but since it has not been checked against a figure returned by the server, the validity of the approximation itself is unverified. No conversion from character counts has been used.
 - **Cache efficiency (L3) was not measured.**
 - **This indicator cannot read differences in effect by model capability.** The size of the step (23.4 / 29.3 / 14.5 / 30.2) does not follow model capability; it tracks the length of the response at the ceiling. The step is a ratio of "ten attempts to one," so it is determined by the ceiling setting and the response length. The hypothesis that lighter models benefit more from self-description is therefore not refuted but **unanswerable by this measurement**. A different indicator is needed.
 - **The training side was not measured.** As noted at the end of Section 4, self-description should tell there too, but every measurement here concerns inference.
@@ -249,7 +251,7 @@ Reconsidering the role of open data — from simple publication toward a strateg
 
 ### Call for Collaboration
 
-Of the hypotheses set out here, the reduction of search through self-description, and the derivation of requirements from operational logs, have now received a first measurement, reported in Section 5. CoT token counts themselves, the interaction effect for lighter models, the effect on framing questions, and reproduction on real data remain either untested or unanswerable by the present approach. The measurement framework and results are published here:
+Of the hypotheses set out here, the reduction of search through self-description, and the derivation of requirements from operational logs, have now received a first measurement, reported in Section 5. Obtaining CoT token counts accurately across model families, the interaction effect for lighter models, the effect on framing questions, and reproduction on real data remain either untested or unanswerable by the present approach. The measurement framework and results are published here:
 
 **https://github.com/beachcities/RoT**
 
