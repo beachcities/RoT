@@ -13,6 +13,10 @@ benchmark/results/reference/*.png
 *.env
 !.env.example
 
+# 会話エクスポート等の一時運搬物。私有データなので公開リポジトリには絶対に入れない
+# （R2Aの概念系譜台帳の作業領域。claude-export.zip・展開物・台帳本体が置かれる）
+local/
+
 # Python
 __pycache__/
 *.py[cod]
