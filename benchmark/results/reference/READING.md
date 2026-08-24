@@ -15,7 +15,11 @@
   * CoT 列は usage が返す reasoning_tokens。これが n/a でも、応答本文に
     <think> が残っていれば思考は取れている（思考字数の列を見ること）。
     実測: vLLM を --reasoning-parser 無しで動かすと CoT は n/a、思考字数は入る。
-  * 思考字数は文字数であってトークン数ではない。CoT の代わりにはならない。
+  * 思考字数は文字数であってトークン数ではない。
+  * 思考token は、サーバが reasoning_tokens を返せばその値、返さなければ
+    count_thinking.py がモデルのトークナイザで数え直した近似。どちらで得た値かは
+    thinking_tokens_source に入る。数えられなければ n/a のままで、
+    文字数からの換算はしない。
   * 生成上限に達した試行は集計から外していない。到達件数は水準ごとの表の
     「生成上限」列にある。上限値は fingerprint.settings.sampling_requested。
   * 二山を分ける基準は success（正答したか）そのもの。解けた試行は打ち切りを

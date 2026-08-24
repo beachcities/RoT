@@ -1,3 +1,8 @@
 openai>=1.40.0
 python-dotenv>=1.0.0
 matplotlib>=3.8
+
+# 思考テキストのトークン数を数えるとき（count_thinking.py）だけ要る
+tokenizers>=0.20
+huggingface_hub>=0.25
+truststore>=0.9

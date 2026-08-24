@@ -418,6 +418,17 @@ python backfill_fingerprints.py
 
 いま `suites/` にある同名ファイルをハッシュして当てはめることはしません。組は編集されているので、現在の内容がそのとき投げた内容だとは言えないためです。
 
+### 中間推論のトークン数を数える
+
+```bash
+python count_thinking.py results/reference/run_....json --dry-run
+python count_thinking.py results/reference/run_....json
+```
+
+サーバが `usage` で `reasoning_tokens` を返さない場合に、取り出した思考テキストを**そのモデルのトークナイザで数えて**結果に書き足します。サーバが返した値があればそちらが正で、両方取れたときは上書きせず差を残します。**数えられない場合は `null` のままで、文字数からの換算はしません。**
+
+数えた値は生成時のトークン列と一致しない近似です。取り出しの三経路と、新しいモデル系統を足す手順は [`LOCAL_MODELS.md`](LOCAL_MODELS.md) にあります。
+
 ### 思考テキストから要求仕様を逆算する
 
 ```bash

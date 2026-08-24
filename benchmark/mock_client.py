@@ -216,6 +216,28 @@ def s_think_field(ctx):
     )
 
 
+def s_think_close(ctx):
+    """終了タグだけを返すモデル（開始タグはチャットテンプレート側にある形）。
+
+    Olmo-3-7B-Think を vLLM でパーサ無しに動かすとこの形になる。
+    """
+    think = "対応表が見当たらないので、社名から推し量るしかない。"
+    return _response(
+        think + "</think>" + chr(10) * 2 + _correct(ctx),
+        _usage(420, 260, reasoning_tokens=None, details="absent"),
+        model="mock-think-close",
+    )
+
+
+def s_think_alt_tag(ctx):
+    """別系統のタグ（<reasoning>…</reasoning>）で返すモデル。"""
+    return _response(
+        "<reasoning>別の書式で囲う系統</reasoning>" + chr(10) + _correct(ctx),
+        _usage(420, 260, reasoning_tokens=None, details="absent"),
+        model="mock-think-alt-tag",
+    )
+
+
 def s_no_temperature(ctx):
     """temperature を受け付けないモデル。落として投げ直す経路を踏むためのもの。
 
@@ -265,6 +287,8 @@ SCENARIOS = {
     "mock-error": s_error,
     "mock-error-midway": s_error_midway,
     "mock-think-inline": s_think_inline,
+    "mock-think-close": s_think_close,
+    "mock-think-alt-tag": s_think_alt_tag,
     "mock-think-field": s_think_field,
     "mock-no-temperature": s_no_temperature,
     "mock-length-stop": s_length_stop,

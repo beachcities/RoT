@@ -378,7 +378,8 @@ def _():
 @check("思考: 複数の <think> があれば連結する")
 def _():
     text = "<think>一つ目</think>途中<think>二つ目</think>\n55"
-    thinking, answer = rb.split_thinking(SimpleNamespace(content=text))
+    thinking, answer, source = rb.split_thinking(SimpleNamespace(content=text))
+    assert source == "tag_pair", source
     assert thinking == "一つ目" + chr(10) + "二つ目", thinking
     assert answer.endswith("55") and "<think>" not in answer, answer
 
@@ -434,6 +435,97 @@ def _():
     assert run_["environment"]["python"] and run_["environment"]["openai_sdk"]
     assert run_["sampling"]["mock-reasoning"]["requested"] == rb.sampling_params()
     assert run_["fingerprint"]["settings"]["sampling_requested"] == rb.sampling_params()
+
+
+# --- 思考のトークン数 ------------------------------------------------------
+
+
+class _StubTokenizer:
+    """空白区切りで数えるだけの替え玉。検査で通信しないため。"""
+
+    class _Enc:
+        def __init__(self, ids):
+            self.ids = ids
+
+    def encode(self, text, add_special_tokens=False):
+        return self._Enc(text.split())
+
+
+@check("思考: 三通りの経路をすべて拾い、どれで取れたかを残す")
+def _():
+    cases = {
+        "mock-think-field": "reasoning_content",   # サーバが分けて返す
+        "mock-think-inline": "tag_pair",           # 対で本文に現れる
+        "mock-think-close": "closing_tag",         # 終了タグだけ
+        "mock-think-alt-tag": "tag_pair",          # 別系統のタグ
+    }
+    for model, expected in cases.items():
+        r = run(model, max_attempts=1)
+        assert r["thinking_source"] == expected, (model, r["thinking_source"])
+        a = r["attempt_log"][0]
+        assert a["thinking"], model
+        assert "</think>" not in a["answer"] and "</reasoning>" not in a["answer"], model
+        assert a["success"] is True, (model, a["answer"])
+
+
+@check("思考: 返さないモデルでは経路も null")
+def _():
+    r = run("mock-reasoning", max_attempts=1)
+    assert r["thinking_source"] is None, r["thinking_source"]
+
+
+@check("トークン数: サーバが返さない分だけ数え、由来を残す")
+def _():
+    import count_thinking as ct
+
+    run_ = {"models": ["stub"], "results": [{
+        "attempt_log": [
+            {"attempt": 1, "answer": "x", "thinking": "a b c", "reasoning_tokens": None},
+        ]}]}
+    stats = ct.annotate(run_, _StubTokenizer(), "stub")
+    a = run_["results"][0]["attempt_log"][0]
+    assert a["thinking_tokens"] == 3, a
+    assert a["thinking_tokens_source"] == "tokenizer", a
+    assert stats["tokenizer"] == 1 and stats["server"] == 0
+
+
+@check("トークン数: サーバの値を正とし、上書きせずに差を残す")
+def _():
+    import count_thinking as ct
+
+    run_ = {"models": ["stub"], "results": [{
+        "attempt_log": [
+            {"attempt": 1, "answer": "x", "thinking": "a b c d", "reasoning_tokens": 6},
+        ]}]}
+    ct.annotate(run_, _StubTokenizer(), "stub")
+    a = run_["results"][0]["attempt_log"][0]
+    assert a["thinking_tokens"] == 6, a            # サーバ値のまま
+    assert a["thinking_tokens_source"] == "server"
+    assert a["thinking_tokens_counted"] == 4       # 数えた値は別に残す
+    assert a["thinking_tokens_delta"] == -2
+
+
+@check("トークン数: 数えられなければ null。文字数から換算しない")
+def _():
+    import count_thinking as ct
+
+    run_ = {"models": ["stub"], "results": [{
+        "attempt_log": [
+            {"attempt": 1, "answer": "x", "thinking": None, "reasoning_tokens": None},
+        ]}]}
+    ct.annotate(run_, None, "stub")               # トークナイザ無し
+    a = run_["results"][0]["attempt_log"][0]
+    assert a["thinking_tokens"] is None, a
+    assert a["thinking_tokens_source"] is None, a
+    assert run_["results"][0]["thinking_tokens"] is None
+
+
+@check("トークン数: 公開トークナイザを持たない系統は理由つきで素通りする")
+def _():
+    import count_thinking as ct
+
+    tok, why = ct.load_tokenizer("gpt-4o-mini")
+    assert tok is None and "トークナイザ" in why, why
 
 
 # --- 要求仕様の逆算 --------------------------------------------------------

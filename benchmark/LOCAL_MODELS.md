@@ -388,3 +388,112 @@ python derive_requirements.py results/reference/run_20260823T124213Z.json --show
   実運用のログでは、この比率が変わる可能性がある。
 * 欠落が「単一の対応表」という形をしていたから一意に落ちた可能性がある。
   別の形の欠落で同じ手順が回るかは確かめていない。
+
+---
+
+# 中間推論のトークン数
+
+これまで取れていたのは**文字数だけ**だった。文字数はトークン数の代わりにならない
+（言語や記号の混ざり方で比が変わる）。`count_thinking.py` が、取り出したテキストを
+そのモデルのトークナイザで数えて結果に書き足す。
+
+```bash
+python count_thinking.py results/reference/run_20260823T124213Z.json --dry-run
+python count_thinking.py results/reference/run_20260823T124213Z.json
+```
+
+## 何を正とするか
+
+| 状況 | `thinking_tokens` | `thinking_tokens_source` |
+| --- | --- | --- |
+| サーバが `usage` で `reasoning_tokens` を返す | その値 | `server` |
+| 返さないが、思考テキストとトークナイザがある | 数えた値 | `tokenizer` |
+| どちらも無い | **`null`** | `null` |
+
+**両方取れた場合は上書きしない。** サーバの値を正とし、数えた値を
+`thinking_tokens_counted`、差を `thinking_tokens_delta` に別途残す。差の大きさが
+分かれば、近似の妥当性を後から評価できる。
+
+**数えられない場合は `null` のままにする。文字数からの換算はしない。**
+
+## 近似であることについて
+
+ここで数えるのは「取り出したテキストを、いま符号化し直したときの長さ」であって、
+**生成時に実際に流れたトークン列とは一致しない可能性がある**。
+
+* 開始タグ・終了タグそのものは思考テキストに含まれていない（切り出しで落としている）
+* 特殊トークンの扱いはテンプレート依存で、ここでは付けずに数えている
+* 前後の空白の削り方が、切り出しの時点と生成時とで違いうる
+
+したがって `tokenizer` 由来の値は**下限寄りの近似**である。
+
+## 取り出しの三経路
+
+`run_benchmark.split_thinking()` が三通りを扱い、**どれで取れたかを
+`thinking_source` に記録する**。系統によって形が違うので、後から
+「この値はどうやって取ったのか」が分からないと突き合わせられない。
+
+| `thinking_source` | 形 | 例 |
+| --- | --- | --- |
+| `reasoning_content` | サーバが分けて返す | vLLM / SGLang を `--reasoning-parser` 付きで起動した場合 |
+| `tag_pair` | 開始タグと終了タグが対で本文に現れる | 多くの系統 |
+| `closing_tag` | **終了タグだけが現れる**（開始タグはチャットテンプレート側） | Olmo-3-7B-Think をパーサ無しで動かした場合 |
+| `null` | 思考が返らない | API 経由の3モデル |
+
+タグの対は `run_benchmark.THINK_TAGS` に並べてある
+（`<think>` / `<thinking>` / `<reasoning>` / `<|begin_of_thought|>`）。
+
+## 新しいモデル系統を足す手順
+
+1. **`<think>` の書式を確かめる。** モデルカードか `tokenizer_config.json` の
+   `chat_template` を見る。対で出るのか、終了タグだけなのか。
+   `THINK_TAGS` に無いタグなら1行足す。
+2. **パーサの有無を確かめる。** `vllm serve --reasoning-parser <name>` が使えるなら
+   `reasoning_content` で分かれて返り、`reasoning_tokens` も埋まる。
+   使えなくてもよい（本文から切り出せる）。**実測: vLLM 0.27.1 には
+   reasoning-parser が1件も登録されていなかった。**
+   使えるかはトークナイザ依存で、`<think>` が単一トークンでないと弾かれる。
+3. **トークナイザを確かめる。** `count_thinking.py` は Hugging Face の
+   `tokenizer.json` を取ってきて `tokenizers` で読む。
+   公開されていない系統（API 経由のモデルなど）は `NO_TOKENIZER` に前置詞を足すか、
+   そのまま `null` にしておく。`--tokenizer` で明示指定もできる。
+4. **モックにシナリオを足して経路を通す。** `mock_client.py` の
+   `mock-think-inline` / `mock-think-close` / `mock-think-alt-tag` / `mock-think-field`
+   が四通りを踏んでいる。新しい形はここに足す。
+
+必要なのは `pip install tokenizers huggingface_hub`。`transformers` は入れない
+（torch を引き込むため）。TLS を中継する環境では証明書の検証が通らないことがあり、
+その場合は `truststore` を入れると OS の証明書ストアを使う（実測: この環境がそうだった）。
+
+## Olmo ランに遡って適用した結果
+
+再実行なしで、20実行・76試行すべてにトークン数が入った
+（`thinking_tokens_source` は全件 `tokenizer`。このサーバは `reasoning_tokens` を
+返していないため、`server` 由来の値は0件で、差の記録も無い）。
+
+| 水準 | `task_04` | `task_06` |
+| --- | --- | --- |
+| `l0_opaque` | 7,411 | **110,853** |
+| `l1_names` | 1,709 | 89,382 |
+| `l2_units_ref` | 3,214 | 94,690 |
+| `l3_units_doc` | 10,185 | 87,798 |
+| `l4_units_record` | 1,266 | 85,926 |
+| `l5_codes_ref` | 5,832 | **69,183** |
+| `l6_codes_doc` | 643 | **1,027** |
+| `l7_codes_record` | 947 | 1,102 |
+| `l8_flags_record` | 554 | 1,260 |
+| `l9_prose` | 750 | 1,254 |
+
+`task_06` の `l5` → `l6` は **69,183 → 1,027 トークン**。
+
+**このランについては、稿の第5節「CoTのトークン数は取れていません」を書き換えられる。**
+ただし次の三点は変わらない。
+
+* **API 経由の3モデルでは依然として取れていない。** `reasoning_tokens` が0で返り、
+  思考テキストも無いので、数える対象が無い。
+* この値は**サーバが返したものではなく、後から数えた近似**である。
+* このランは `REPEATS=1` で、各セルの n は1。ばらつきは評価できない。
+
+なお、このランは `thinking_source` を記録する前のものなので、**どの経路で取り出したかは
+`null` のまま**である（実際には `closing_tag` だったが、結果ファイルからは判定できない
+ので埋めていない）。以後のランには入る。

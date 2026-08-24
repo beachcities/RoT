@@ -2404,7 +2404,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 1671,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 2,
@@ -2421,9 +2423,13 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 5740,
+          "thinking_tokens_source": "tokenizer"
         }
-      ]
+      ],
+      "thinking_tokens": 7411,
+      "thinking_tokens_source": "tokenizer"
     },
     {
       "model": "allenai/Olmo-3-7B-Think",
@@ -2464,7 +2470,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 5957,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 2,
@@ -2481,7 +2489,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 13915,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 3,
@@ -2498,7 +2508,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 16502,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 4,
@@ -2515,7 +2527,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 15059,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 5,
@@ -2532,7 +2546,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 8025,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 6,
@@ -2549,7 +2565,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 13706,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 7,
@@ -2566,7 +2584,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 9476,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 8,
@@ -2583,7 +2603,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 9520,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 9,
@@ -2600,7 +2622,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 10601,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 10,
@@ -2617,9 +2641,13 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 8092,
+          "thinking_tokens_source": "tokenizer"
         }
-      ]
+      ],
+      "thinking_tokens": 110853,
+      "thinking_tokens_source": "tokenizer"
     },
     {
       "model": "allenai/Olmo-3-7B-Think",
@@ -2660,9 +2688,13 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 1709,
+          "thinking_tokens_source": "tokenizer"
         }
-      ]
+      ],
+      "thinking_tokens": 1709,
+      "thinking_tokens_source": "tokenizer"
     },
     {
       "model": "allenai/Olmo-3-7B-Think",
@@ -2703,7 +2735,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 6553,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 2,
@@ -2720,7 +2754,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 14200,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 3,
@@ -2737,7 +2773,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 11974,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 4,
@@ -2754,7 +2792,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 7845,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 5,
@@ -2771,7 +2811,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 15512,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 6,
@@ -2788,7 +2830,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 6681,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 7,
@@ -2805,7 +2849,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 6237,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 8,
@@ -2822,7 +2868,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 7863,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 9,
@@ -2839,7 +2887,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 3792,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 10,
@@ -2856,9 +2906,13 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 8725,
+          "thinking_tokens_source": "tokenizer"
         }
-      ]
+      ],
+      "thinking_tokens": 89382,
+      "thinking_tokens_source": "tokenizer"
     },
     {
       "model": "allenai/Olmo-3-7B-Think",
@@ -2899,9 +2953,13 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 3214,
+          "thinking_tokens_source": "tokenizer"
         }
-      ]
+      ],
+      "thinking_tokens": 3214,
+      "thinking_tokens_source": "tokenizer"
     },
     {
       "model": "allenai/Olmo-3-7B-Think",
@@ -2942,7 +3000,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 4822,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 2,
@@ -2959,7 +3019,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 9419,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 3,
@@ -2976,7 +3038,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 11193,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 4,
@@ -2993,7 +3057,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 11205,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 5,
@@ -3010,7 +3076,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 12459,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 6,
@@ -3027,7 +3095,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 9242,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 7,
@@ -3044,7 +3114,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 12634,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 8,
@@ -3061,7 +3133,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 8534,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 9,
@@ -3078,7 +3152,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 7631,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 10,
@@ -3095,9 +3171,13 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 7551,
+          "thinking_tokens_source": "tokenizer"
         }
-      ]
+      ],
+      "thinking_tokens": 94690,
+      "thinking_tokens_source": "tokenizer"
     },
     {
       "model": "allenai/Olmo-3-7B-Think",
@@ -3138,7 +3218,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 4528,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 2,
@@ -3155,9 +3237,13 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 5657,
+          "thinking_tokens_source": "tokenizer"
         }
-      ]
+      ],
+      "thinking_tokens": 10185,
+      "thinking_tokens_source": "tokenizer"
     },
     {
       "model": "allenai/Olmo-3-7B-Think",
@@ -3198,7 +3284,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 6770,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 2,
@@ -3215,7 +3303,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 10087,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 3,
@@ -3232,7 +3322,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 8820,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 4,
@@ -3249,7 +3341,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 13397,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 5,
@@ -3266,7 +3360,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 8795,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 6,
@@ -3283,7 +3379,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 8708,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 7,
@@ -3300,7 +3398,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 6122,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 8,
@@ -3317,7 +3417,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 6604,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 9,
@@ -3334,7 +3436,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 8725,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 10,
@@ -3351,9 +3455,13 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 9770,
+          "thinking_tokens_source": "tokenizer"
         }
-      ]
+      ],
+      "thinking_tokens": 87798,
+      "thinking_tokens_source": "tokenizer"
     },
     {
       "model": "allenai/Olmo-3-7B-Think",
@@ -3394,9 +3502,13 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 1266,
+          "thinking_tokens_source": "tokenizer"
         }
-      ]
+      ],
+      "thinking_tokens": 1266,
+      "thinking_tokens_source": "tokenizer"
     },
     {
       "model": "allenai/Olmo-3-7B-Think",
@@ -3437,7 +3549,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 3633,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 2,
@@ -3454,7 +3568,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 13752,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 3,
@@ -3471,7 +3587,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 6667,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 4,
@@ -3488,7 +3606,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 7908,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 5,
@@ -3505,7 +3625,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 13622,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 6,
@@ -3522,7 +3644,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 12881,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 7,
@@ -3539,7 +3663,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 7481,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 8,
@@ -3556,7 +3682,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 6727,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 9,
@@ -3573,7 +3701,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 6753,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 10,
@@ -3590,9 +3720,13 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 6502,
+          "thinking_tokens_source": "tokenizer"
         }
-      ]
+      ],
+      "thinking_tokens": 85926,
+      "thinking_tokens_source": "tokenizer"
     },
     {
       "model": "allenai/Olmo-3-7B-Think",
@@ -3633,9 +3767,13 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 5832,
+          "thinking_tokens_source": "tokenizer"
         }
-      ]
+      ],
+      "thinking_tokens": 5832,
+      "thinking_tokens_source": "tokenizer"
     },
     {
       "model": "allenai/Olmo-3-7B-Think",
@@ -3676,7 +3814,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 8665,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 2,
@@ -3693,7 +3833,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 7112,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 3,
@@ -3710,7 +3852,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 5141,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 4,
@@ -3727,7 +3871,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 3439,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 5,
@@ -3744,7 +3890,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 10783,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 6,
@@ -3761,7 +3909,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 9111,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 7,
@@ -3778,7 +3928,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 6644,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 8,
@@ -3795,7 +3947,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 7563,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 9,
@@ -3812,7 +3966,9 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 4233,
+          "thinking_tokens_source": "tokenizer"
         },
         {
           "attempt": 10,
@@ -3829,9 +3985,13 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 6492,
+          "thinking_tokens_source": "tokenizer"
         }
-      ]
+      ],
+      "thinking_tokens": 69183,
+      "thinking_tokens_source": "tokenizer"
     },
     {
       "model": "allenai/Olmo-3-7B-Think",
@@ -3872,9 +4032,13 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 643,
+          "thinking_tokens_source": "tokenizer"
         }
-      ]
+      ],
+      "thinking_tokens": 643,
+      "thinking_tokens_source": "tokenizer"
     },
     {
       "model": "allenai/Olmo-3-7B-Think",
@@ -3915,9 +4079,13 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 1027,
+          "thinking_tokens_source": "tokenizer"
         }
-      ]
+      ],
+      "thinking_tokens": 1027,
+      "thinking_tokens_source": "tokenizer"
     },
     {
       "model": "allenai/Olmo-3-7B-Think",
@@ -3958,9 +4126,13 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 947,
+          "thinking_tokens_source": "tokenizer"
         }
-      ]
+      ],
+      "thinking_tokens": 947,
+      "thinking_tokens_source": "tokenizer"
     },
     {
       "model": "allenai/Olmo-3-7B-Think",
@@ -4001,9 +4173,13 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 1102,
+          "thinking_tokens_source": "tokenizer"
         }
-      ]
+      ],
+      "thinking_tokens": 1102,
+      "thinking_tokens_source": "tokenizer"
     },
     {
       "model": "allenai/Olmo-3-7B-Think",
@@ -4044,9 +4220,13 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 554,
+          "thinking_tokens_source": "tokenizer"
         }
-      ]
+      ],
+      "thinking_tokens": 554,
+      "thinking_tokens_source": "tokenizer"
     },
     {
       "model": "allenai/Olmo-3-7B-Think",
@@ -4087,9 +4267,13 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 1260,
+          "thinking_tokens_source": "tokenizer"
         }
-      ]
+      ],
+      "thinking_tokens": 1260,
+      "thinking_tokens_source": "tokenizer"
     },
     {
       "model": "allenai/Olmo-3-7B-Think",
@@ -4130,9 +4314,13 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 750,
+          "thinking_tokens_source": "tokenizer"
         }
-      ]
+      ],
+      "thinking_tokens": 750,
+      "thinking_tokens_source": "tokenizer"
     },
     {
       "model": "allenai/Olmo-3-7B-Think",
@@ -4173,9 +4361,13 @@
           "output_capped": false,
           "response_model": "allenai/Olmo-3-7B-Think",
           "system_fingerprint": "vllm-0.27.1-181ffddf",
-          "finish_reason": "stop"
+          "finish_reason": "stop",
+          "thinking_tokens": 1254,
+          "thinking_tokens_source": "tokenizer"
         }
-      ]
+      ],
+      "thinking_tokens": 1254,
+      "thinking_tokens_source": "tokenizer"
     }
   ],
   "summary": {
@@ -5483,5 +5675,9 @@
         }
       }
     }
+  },
+  "thinking_token_count": {
+    "tokenizer": "allenai/Olmo-3-7B-Think",
+    "note": "サーバが返した値を正とし、返らない分だけトークナイザで数えた。数えた値は生成時のトークン列とは一致しない近似。"
   }
 }

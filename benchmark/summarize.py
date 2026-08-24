@@ -110,6 +110,10 @@ def summarize_condition(rows, max_attempts=None):
         # usage が内訳を返さないサーバでも本文から切り出せば取れる。
         "thinking_chars": None,
         "thinking_chars_dist": distribution([]),
+        # 思考のトークン数。サーバが返した値か、後から数えた近似か。
+        "thinking_tokens": None,
+        "thinking_tokens_dist": distribution([]),
+        "thinking_tokens_source": None,
         # タスクごとの内訳。タスクをまたいで混ぜると、難度の違う問いが1つの
         # 中央値に潰れる。
         "per_task": {},
@@ -175,6 +179,17 @@ def summarize_condition(rows, max_attempts=None):
             ),
             "thinking_chars_dist": distribution(
                 [r["thinking_chars"] for r in usable if r.get("thinking_chars")]
+            ),
+            "thinking_tokens": (
+                sum(r["thinking_tokens"] for r in usable if r.get("thinking_tokens"))
+                if any(r.get("thinking_tokens") for r in usable) else None
+            ),
+            "thinking_tokens_dist": distribution(
+                [r["thinking_tokens"] for r in usable if r.get("thinking_tokens")]
+            ),
+            "thinking_tokens_source": next(
+                (r.get("thinking_tokens_source") for r in usable
+                 if r.get("thinking_tokens_source")), None
             ),
             "per_task": per_task_stats(usable),
             "solved_attempts_dist": distribution(
@@ -369,6 +384,7 @@ CONDITION_COLS = [
     ("出力", 9),
     ("総token", 9),
     ("思考字数", 10),
+    ("思考token", 11),
     ("ROT/1k", 9),
 ]
 
@@ -392,6 +408,7 @@ LEVEL_COLS = [
     ("上限到達", 10),
     ("生成上限", 10),
     ("思考字数中央", 14),
+    ("思考token中央", 15),
     ("ROT/1k", 9),
     ("中央値比", 10),
 ]
@@ -447,6 +464,7 @@ def render(summary):
                 cell(st["output_tokens"]),
                 cell(st["total_tokens"]),
                 cell(st["thinking_chars"]),
+                cell(st["thinking_tokens"]),
                 cell(st["rot_per_1k"], 4),
             ]
             lines.append(row(zip(values, widths)) + note)
@@ -543,6 +561,7 @@ def render(summary):
                         cell(st["at_cap"]),
                         cell(st["output_capped"]),
                         cell(st["thinking_chars_dist"]["median"], 0),
+                        cell(st["thinking_tokens_dist"]["median"], 0),
                         cell(st["rot_per_1k"], 4),
                         cell(ratio(tok["median"], base), 3),
                     ], widths))
@@ -616,7 +635,11 @@ STATIC_CAVEATS = [
     "  * CoT 列は usage が返す reasoning_tokens。これが n/a でも、応答本文に",
     "    <think> が残っていれば思考は取れている（思考字数の列を見ること）。",
     "    実測: vLLM を --reasoning-parser 無しで動かすと CoT は n/a、思考字数は入る。",
-    "  * 思考字数は文字数であってトークン数ではない。CoT の代わりにはならない。",
+    "  * 思考字数は文字数であってトークン数ではない。",
+    "  * 思考token は、サーバが reasoning_tokens を返せばその値、返さなければ",
+    "    count_thinking.py がモデルのトークナイザで数え直した近似。どちらで得た値かは",
+    "    thinking_tokens_source に入る。数えられなければ n/a のままで、",
+    "    文字数からの換算はしない。",
     "  * 生成上限に達した試行は集計から外していない。到達件数は水準ごとの表の",
     "    「生成上限」列にある。上限値は fingerprint.settings.sampling_requested。",
     "  * 二山を分ける基準は success（正答したか）そのもの。解けた試行は打ち切りを",

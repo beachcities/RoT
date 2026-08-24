@@ -424,44 +424,60 @@ def create_completion(client, model, messages, sampling):
             sampling["used"] = {k: v for k, v in sampling["used"].items() if k != name}
 
 
-# 推論部分の取り出し方は2通りある。
-#   1. vLLM / SGLang を --reasoning-parser 付きで動かすと、応答が
-#      message.reasoning_content に思考を分けて返し、reasoning_tokens も埋まる
-#   2. パーサ無しだと <think>…</think> が本文にそのまま残る
-# どちらでも拾えるようにする。API 経由のモデルはどちらも返さないので None のまま。
-THINK_PATTERN = re.compile(r"<think>(.*?)</think>\s*", re.S)
-# 開始タグがチャットテンプレート側にあり、生成には終了タグしか現れないモデルがある
-# （実測: vLLM 経由の Olmo-3-7B-Think）。その場合、終了タグより前が思考。
-THINK_CLOSE = "</think>"
+# 推論部分の取り出し方は三通りある。
+#   1. reasoning_content に分けて返る（--reasoning-parser 付きのサーバ）
+#   2. 開始タグと終了タグが対で本文に現れる
+#   3. 終了タグだけが現れる（開始タグはチャットテンプレート側にある）
+# 3 は Olmo-3-7B-Think で実際に踏んだ形。拾い損ねると、思考を含んだ本文が
+# そのまま会話履歴に積まれ、数試行で文脈長を使い切る（実測: 5〜8試行で 16k 超過）。
+#
+# 系統ごとにタグが違うので、対を並べて持つ。新しい系統を足すときはここに1行足す
+# （→ LOCAL_MODELS.md「新しいモデル系統を足す手順」）。
+THINK_TAGS = [
+    ("<think>", "</think>"),                      # Qwen3.x / Olmo 3 / DeepSeek-R1 系
+    ("<thinking>", "</thinking>"),
+    ("<reasoning>", "</reasoning>"),
+    ("<|begin_of_thought|>", "<|end_of_thought|>"),
+]
+
+
+def _tag_pair_patterns():
+    for open_tag, close_tag in THINK_TAGS:
+        yield close_tag, re.compile(
+            re.escape(open_tag) + r"(.*?)" + re.escape(close_tag) + r"\s*", re.S
+        )
 
 
 def split_thinking(message):
-    """(思考テキスト, 最終本文) を返す。思考が無ければ (None, 本文)。
+    """(思考テキスト, 最終本文, どの経路で取れたか) を返す。
+
+    経路は "reasoning_content" / "tag_pair" / "closing_tag" / None。
+    **どれで取れたかを結果に残す。** 系統によって形が違うので、後から
+    「この値はどうやって取ったのか」が分からないと突き合わせられない。
 
     長さだけでなくテキストそのものを残す。何を推し量っていたかは、
     トークン数からは分からない。
-
-    取り出し方は3通りある。
-      1. reasoning_content に分かれて返る（--reasoning-parser 付きのサーバ）
-      2. <think>…</think> が本文に対で現れる
-      3. 終了タグだけが現れる（開始タグはプロンプト側にある）
-    3 を拾い損ねると、思考を含んだ本文がそのまま会話履歴に積まれ、
-    数試行で文脈長を使い切る（実測: 5〜8試行で 16k を超えて 400 になった）。
     """
     content = (getattr(message, "content", None) or "")
     thinking = getattr(message, "reasoning_content", None)
     if thinking is None and isinstance(message, dict):
         thinking = message.get("reasoning_content")
     if thinking:
-        return thinking, content.strip()
-    matches = THINK_PATTERN.findall(content)
-    if matches:
-        joined = chr(10).join(m.strip() for m in matches)
-        return joined, THINK_PATTERN.sub("", content).strip()
-    if THINK_CLOSE in content:
-        head, _, tail = content.partition(THINK_CLOSE)
-        return head.strip(), tail.strip()
-    return None, content.strip()
+        return thinking, content.strip(), "reasoning_content"
+
+    for close_tag, pattern in _tag_pair_patterns():
+        matches = pattern.findall(content)
+        if matches:
+            joined = chr(10).join(m.strip() for m in matches)
+            return joined, pattern.sub("", content).strip(), "tag_pair"
+
+    # 開始タグがプロンプト側にあり、生成には終了タグしか現れない場合
+    for _, close_tag in THINK_TAGS:
+        if close_tag in content:
+            head, _, tail = content.partition(close_tag)
+            return head.strip(), tail.strip(), "closing_tag"
+
+    return None, content.strip(), None
 
 
 def response_meta(response):
@@ -516,7 +532,7 @@ def run_task(client, model, condition, data, task, max_attempts=None, repeat=1, 
             attempts.append({"attempt": attempt_no, "error": error})
             break
 
-        thinking, answer = split_thinking(response.choices[0].message)
+        thinking, answer, thinking_source = split_thinking(response.choices[0].message)
         meta = response_meta(response)
         usage = token_breakdown(getattr(response, "usage", None))
 
@@ -550,6 +566,12 @@ def run_task(client, model, condition, data, task, max_attempts=None, repeat=1, 
                 # 思考テキストそのもの。取れなければ null。
                 "thinking": thinking,
                 "thinking_chars": None if thinking is None else len(thinking),
+                # どの経路で取り出したか。系統によって形が違うので残す。
+                "thinking_source": thinking_source,
+                # 思考のトークン数。サーバが usage で返したものが正。
+                # 返らない場合は count_thinking.py が後から数えて埋める。
+                "thinking_tokens": usage["reasoning"],
+                "thinking_tokens_source": None if usage["reasoning"] is None else "server",
                 # 生成上限に達して打ち切られたか。達しても集計からは外さない。
                 "output_capped": meta["finish_reason"] == "length",
                 **meta,
@@ -591,6 +613,10 @@ def run_task(client, model, condition, data, task, max_attempts=None, repeat=1, 
         # 生成上限に達した試行の数。0 は「達しなかった」で、上限を送っていない
         # 場合との区別は fingerprint.settings.sampling_requested を見る。
         "output_capped_attempts": sum(1 for a in attempts if a.get("output_capped")),
+        # どの経路で思考を取り出したか（試行をまたいで同じはず）。
+        "thinking_source": next(
+            (a["thinking_source"] for a in attempts if a.get("thinking_source")), None
+        ),
         "error": error,
         "success": success,
         "tokens_measured": tokens_measured,
