@@ -95,6 +95,8 @@ With that understood, self-description governs, from the outside, the effectiven
 
 All of the above concerns inference. Self-description should tell on the training side as well: learn from data whose correspondences are stated, and those correspondences fold into the weights, so they no longer need supplying as context at inference time. This paper enters from the inference side because the effect is direct and shows itself quickly when tested, not because the training side is unaffected. Note, though, that "start with the data that gets used most" means different things in the two cases. On the training side it is volume within the corpus; on the inference side, frequency of reference. The same dataset need not rank highly in both.
 
+One further thought, untested and so offered as hypothesis. Self-description is a precondition not only for answering but for *framing the question*. If what the data holds cannot be read off it, one cannot pose a question in a form the data could answer. Where an agent sets its own subtasks, the two run together in the same loop. And the less capacity a model has to spare for inference, the more it is confined to what is written down — so the degree to which self-description governs the quality of the questions posed should be greater, not smaller, for lighter models. My sense is that the ability to frame a question is, in more situations than not, of greater social value than the ability to solve one. This paper's measurements do not reach that path, but it may matter as much as the reduction of search.
+
 ---
 
 ## 5. What the Measurements Showed
@@ -168,17 +170,25 @@ The procedure has four stages. Extract, from the reasoning of failed attempts, t
 
 The extracted sentences read as requirements almost verbatim.
 
-> The problem is the data doesn't have an explicit column indicating the industry. (l0)
+> The problem is, the data doesn't list the industry type for each company. (l0)
 >
-> The unit definition doesn't list what each industry code means. (l3)
+> But the dataset doesn't have explicit labels for these industries. (l0)
 >
-> The problem is that the data doesn't have explicit labels explaining what each industry code means. (l5)
+> Alternatively, since the data doesn't specify the mappings for the industry codes… (l1)
 
-Grouped, they came to: the meaning of industry codes (31), the meaning of activity status (20), and resolving the external reference (7). Mentions of units came to zero — these two tasks do not require units. The derivation, in other words, tracks what the task actually needs.
+Grouped, they came to nine sentences, all about the meaning of the industry codes. Units, activity status, and resolving the external reference each came to zero. The meaning of the industry codes is the only thing these two tasks actually require — the derivation, in other words, tracks what the task needs.
 
-The fourth stage then served as its own verification. Mentions numbered 14–24 at l0–l5 and 0–1 at l6–l9. At the level where the meaning of the codes was added, they vanish.
+The fourth stage then served as its own verification. Mentions numbered 1–3 at l0–l5 and zero at l6–l9. At the level where the meaning of the codes was added, they vanish.
 
-Two caveats. The grouping is lexical, and 43 of the 101 sentences went unclassified. And because the later attempts turn toward inferring what the questioner expects, the sentences generated there are not requirements. Applying this to real operational logs would mean using only what precedes that turn — but where to draw the line has not been measured. The procedure is in [`benchmark/derive_requirements.py`](../benchmark/derive_requirements.py).
+**This procedure had to be rebuilt once.** In the first implementation, the group headings and the sentences listed beneath them did not correspond. There were two causes, and both are worth recording.
+
+The first: extraction was too broad. Of the 191 sentences that triggered it, 101 described a gap not in the data but in **the question**. The form was: "whether companies that have ceased operations should be excluded is not specified in the question." The data does carry an activity-status column, so the model knew the distinction existed and could not decide which the question wanted. That is ambiguity in the task, not absence in the data. The second cause: grouping was decided by whichever keyword appeared first in the sentence. A sentence saying "since I can't access external data, the mapping of the codes is unclear" landed in the external-reference group.
+
+After adding a gate on the grammatical subject and scoring the grouping by number of matches, ten sentences survived — a yield of 5%. The low figure is not a sign that extraction is too strict; it reflects the fact that most of the search was directed at the ambiguity of the question.
+
+The task here was built for an experiment, so what this ratio would be against real operational logs is unknown. But it is worth recording that the data side is not the only source of expanding search. The same logs should also yield what the *question* ought to have stated.
+
+Remaining caveats: one of the ten sentences went unclassified. And because the later attempts turn toward inferring what the questioner expects, the sentences generated there are not requirements. Applying this to real operational logs would mean using only what precedes that turn — but where to draw the line has not been measured. The procedure is in [`benchmark/derive_requirements.py`](../benchmark/derive_requirements.py).
 
 ### Traps on the Measuring Side
 
@@ -196,6 +206,7 @@ Seven identifiers have now been enumerated and closed, but there is no way to sh
 - **Cache efficiency (L3) was not measured.**
 - **This indicator cannot read differences in effect by model capability.** The size of the step (23.4 / 29.3 / 14.5 / 30.2) does not follow model capability; it tracks the length of the response at the ceiling. The step is a ratio of "ten attempts to one," so it is determined by the ceiling setting and the response length. The hypothesis that lighter models benefit more from self-description is therefore not refuted but **unanswerable by this measurement**. A different indicator is needed.
 - **The training side was not measured.** As noted at the end of Section 4, self-description should tell there too, but every measurement here concerns inference.
+- **Nor was the framing side.** The same hypothesis in Section 4: here the questions were fixed and supplied.
 - **Two tasks, synthetic toy data.** Whether the same shape holds for real data or other tasks has not been measured. The Olmo run used a single repetition, so variance across levels could not be assessed either.
 
 ---
@@ -238,7 +249,7 @@ Reconsidering the role of open data — from simple publication toward a strateg
 
 ### Call for Collaboration
 
-Of the hypotheses set out here, the reduction of search through self-description, and the derivation of requirements from operational logs, have now received a first measurement, reported in Section 5. CoT token counts themselves, the interaction effect for lighter models, and reproduction on real data remain either untested or unanswerable by the present approach. The measurement framework and results are published here:
+Of the hypotheses set out here, the reduction of search through self-description, and the derivation of requirements from operational logs, have now received a first measurement, reported in Section 5. CoT token counts themselves, the interaction effect for lighter models, the effect on framing questions, and reproduction on real data remain either untested or unanswerable by the present approach. The measurement framework and results are published here:
 
 **https://github.com/beachcities/RoT**
 
