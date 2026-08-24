@@ -156,13 +156,21 @@ Across ten attempts the answers moved 249 → 249 → 264 → 264 → 719 → 94
 
 What follows is matching and addition, with not a single hypothesis generated. The gap between 151,416 characters at l5 and 2,796 at l6 closes on that one lookup.
 
-Since characters are no substitute for tokens, the reasoning text was re-counted with the model's own tokeniser. On the same task, 69,183 tokens at l5 become 1,027 at l6. This is not a figure the server returned, however: it is an approximation obtained by counting the extracted text after the fact, and since it excludes the opening and closing tags and any special tokens, it errs low. For the three API models the method is unavailable, since no reasoning text is returned at all.
+Since characters are no substitute for tokens, the reasoning text was re-counted with the model's own tokeniser. On the same task, 69,183 tokens at l5 become 1,027 at l6. This is not a figure the server returned, however: it is an approximation obtained by counting the extracted text after the fact, and since it excludes the opening and closing tags and any special tokens, it errs low. The validity of this approximation was later checked separately, as noted below. For the three API models the method is unavailable, since no reasoning text is returned at all.
 
 Checking this against a model whose reasoning can be read suggests that ROT behaves much as expected. Where the boundary stands, and what happens on either side of it, became visible as a mechanism and not only as a number.
 
 Whether the reasoning can be read, though, is a matter of how one verifies, not of where the indicator applies. Total tokens per outcome can be measured on any model; the first three models above yielded the boundary and the step perfectly well. What could not be read was the breakdown.
 
 And there is no reason to suppose that the mechanism observed here — search expanding as the model gropes for a correspondence that was never stated, and collapsing the moment it is — occurs only inside models one can open. Given the same task, the same shape of consumption appeared. What closed reasoning costs is not the measurement but the attribution: it becomes harder to say where the tokens went.
+
+### Switching the Thinking Off Does Not Move the Boundary
+
+A fifth model, Qwen3.5-9B, was run twice over the same inputs as every other run — once with thinking enabled and once with it disabled. Qwen is open-weight; its training data is not published, and it does not satisfy the OSAID.
+
+The boundary appeared at the same place (l5→l6) under both conditions. The step was 25.5× with thinking on (106,403 → 4,165) and 62.7× with it off (171,343 → 2,734). The control task was solved on the first attempt at all ten levels under both conditions, with no step. Toggling how much the model is allowed to think does not move the boundary created by the presence or absence of the needed information.
+
+What ran against expectation was that enabling thinking produced fewer errors. Context-length overruns numbered four with thinking off and zero with it on. Reading the input and output breakdowns of the two runs, the picture appears to be that with thinking off the answers themselves grow long and accumulate in the conversation history, whereas the thinking is extracted and never carried forward — but this is a reading of the two runs against each other, not a controlled experiment. At the least, on this task, making the model think less was not the cheaper option.
 
 ### The Derivation from Operational Logs Actually Ran
 
@@ -204,12 +212,12 @@ Seven identifiers have now been enumerated and closed, but there is no way to sh
 
 ### What Was Not Measured
 
-- **CoT token counts are available only for the locally served run.** The three API models returned `reasoning_tokens` as zero and no reasoning text either, so there is nothing to count. For the Olmo run an approximation was obtained by re-counting the extracted text with a tokeniser, but since it has not been checked against a figure returned by the server, the validity of the approximation itself is unverified. No conversion from character counts has been used.
+- **CoT token counts are available only for the locally served runs.** The three API models returned `reasoning_tokens` as zero and no reasoning text either, so there is nothing to count. For the locally served runs, the extracted reasoning text was re-counted with each model's tokeniser and checked against the consumption figures the server returned. The residual was a median of 4 tokens per attempt (0.06% of completion for Olmo, 0.15% for Qwen), at the same level across two tokenisers from different families. The approximation runs a few tokens low, since it excludes the opening and closing tags and special tokens, but it is adequate for reading the boundary and the step.
 - **Cache efficiency (L3) was not measured.**
-- **This indicator cannot read differences in effect by model capability.** The size of the step (23.4 / 29.3 / 14.5 / 30.2) does not follow model capability; it tracks the length of the response at the ceiling. The step is a ratio of "ten attempts to one," so it is determined by the ceiling setting and the response length. The hypothesis that lighter models benefit more from self-description is therefore not refuted but **unanswerable by this measurement**. A different indicator is needed.
+- **This indicator cannot read differences in effect by model capability.** The size of the step (23.4 / 29.3 / 14.5 / 30.2 / 25.5 / 62.7) does not follow model capability; it tracks the length of the response at the ceiling. The step is a ratio of "ten attempts to one," so it is determined by the ceiling setting and the response length. The hypothesis that lighter models benefit more from self-description is therefore not refuted but **unanswerable by this measurement**. A different indicator is needed. That two steps from the same model, differing only in whether thinking was enabled, came out at 25.5× and 62.7× is further evidence that the size of the step is set by response length, not capability.
 - **The training side was not measured.** As noted at the end of Section 4, self-description should tell there too, but every measurement here concerns inference.
 - **Nor was the framing side.** The same hypothesis in Section 4: here the questions were fixed and supplied.
-- **Two tasks, synthetic toy data.** Whether the same shape holds for real data or other tasks has not been measured. The Olmo run used a single repetition, so variance across levels could not be assessed either.
+- **Two tasks, synthetic toy data.** Whether the same shape holds for real data or other tasks has not been measured. Both locally served lines (Olmo and Qwen) used a single repetition, so variance across levels could not be assessed either.
 
 ---
 
