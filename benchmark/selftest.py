@@ -9,6 +9,9 @@
 """
 
 import json
+import pathlib
+import tempfile
+import os
 import sys
 import traceback
 
@@ -1188,6 +1191,75 @@ def _():
     text = summarize.render(summary)
     assert "暫定値" in text
     assert "単一タスクの反復のみ" in text
+
+
+@check("seed: 反復ごとに違う値を送り、規則と実際の値を記録する")
+def _():
+    # 全反復に同じ seed を送ると、seed を実際に効かせるサーバでは反復が
+    # 同じ出力になり、ばらつきを測るという設計が成り立たない。
+    assert rb.seed_for_repeat(1) == rb.SEED
+    assert rb.seed_for_repeat(3) == rb.SEED + 2
+    seeds = [rb.sampling_params(r)["seed"] for r in (1, 2, 3, 4, 5)]
+    assert len(set(seeds)) == 5, seeds
+
+    # 投げる直前に当てているか。落とされていれば当てない。
+    sent = []
+
+    class FakeClient:
+        class chat:
+            class completions:
+                @staticmethod
+                def create(**kwargs):
+                    sent.append(kwargs.get("seed"))
+                    raise RuntimeError("ここまで来れば十分")
+
+    sampling = {"requested": rb.sampling_params(), "used": rb.sampling_params(), "dropped": {}}
+    for repeat in (1, 2, 3):
+        try:
+            rb.create_completion(FakeClient(), "m", [], sampling, repeat)
+        except RuntimeError:
+            pass
+    assert sent == [rb.SEED, rb.SEED + 1, rb.SEED + 2], sent
+
+    dropped = {"requested": rb.sampling_params(), "used": {"temperature": 1.0}, "dropped": {}}
+    sent.clear()
+    try:
+        rb.create_completion(FakeClient(), "m", [], dropped, 2)
+    except RuntimeError:
+        pass
+    assert sent == [None], sent
+
+
+@check("エラーの二分: 測定の結果は引き継ぎ、基盤の失敗は回し直す")
+def _():
+    ctx = ("BadRequestError: Error code: 400 - This model's maximum context "
+           "length is 65536 tokens.")
+    got = ("NotFoundError: Error code: 404 - The model "
+           "`allenai/Olmo-3-7B-Think` does not exist.")
+    assert rb.classify_error(ctx) == "measurement"
+    assert rb.classify_error(got) == "infrastructure"
+    assert rb.classify_error("APIConnectionError: Connection error.") == "infrastructure"
+    assert rb.classify_error(None) is None
+
+    # 途中経過を読むとき、基盤側のエラー行だけが落ちる
+    fp = {"suite": "x", "settings": {"repeats": 4}}
+    rows = [
+        {"repeat": 1, "status": "ok", "error": None},
+        {"repeat": 2, "status": "error", "error": ctx, "error_class": "measurement"},
+        {"repeat": 3, "status": "error", "error": got, "error_class": "infrastructure"},
+        # error_class を持たない古い行も、文面から分け直せる
+        {"repeat": 4, "status": "error", "error": got},
+    ]
+    fd, name = tempfile.mkstemp(suffix=".jsonl")
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        f.write(json.dumps({"header": fp}) + chr(10))
+        for r in rows:
+            f.write(json.dumps(r) + chr(10))
+    try:
+        kept = rb.load_partial(pathlib.Path(name), fp)
+    finally:
+        os.unlink(name)
+    assert [r["repeat"] for r in kept] == [1, 2], [r["repeat"] for r in kept]
 
 
 def main():

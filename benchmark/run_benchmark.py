@@ -133,7 +133,25 @@ def load_partial(path, fingerprint):
                     )
                 continue
             done.append(row)
-    return done
+
+    # **基盤の都合で落ちた試行は引き継がない。** 測定の結果であるエラー
+    # （文脈長超過）はそのまま残す。分類は各行の error_class にある。
+    # 古い途中経過には error_class が無いので、その場で文面から分け直す。
+    kept, retry = [], 0
+    for row in done:
+        # 落とす対象は「エラーで終わった」と明示されている行だけ。それ以外は
+        # 判断材料が無いので触らない。
+        if row.get("status") != "error":
+            kept.append(row)
+            continue
+        kind = row.get("error_class") or classify_error(row.get("error"))
+        if kind == "measurement":
+            kept.append(row)
+        else:
+            retry += 1
+    if retry:
+        print(f"  基盤側のエラーで終わっていた {retry} 件は引き継がず、回し直す")
+    return kept
 
 
 def append_partial(path, fingerprint, result):
@@ -225,8 +243,23 @@ SEED = env_int("SEED", 20260820)
 MAX_OUTPUT_TOKENS = env_int("MAX_OUTPUT_TOKENS", 0)
 
 
-def sampling_params():
-    params = {"temperature": TEMPERATURE, "top_p": TOP_P, "seed": SEED}
+# 反復ごとの seed の導出規則。**反復は独立な標本でなければ意味がない。**
+# 全反復に同じ seed を送ると、vLLM のように seed を実際に効かせるサーバでは
+# 1回目と2回目が同じ出力になり、ばらつきを測るという設計が成り立たない。
+# 反復番号から導出して、反復ごとに違う seed を送る。
+#
+#     seed = SEED + (repeat - 1)
+#
+# repeat=1 は SEED そのものなので、REPEATS=1 の既存ランと送る値は変わらない。
+SEED_RULE = "seed = SEED + (repeat - 1)"
+
+
+def seed_for_repeat(repeat):
+    return SEED + (repeat - 1)
+
+
+def sampling_params(repeat=1):
+    params = {"temperature": TEMPERATURE, "top_p": TOP_P, "seed": seed_for_repeat(repeat)}
     if MAX_OUTPUT_TOKENS > 0:
         params["max_tokens"] = MAX_OUTPUT_TOKENS
     return params
@@ -410,6 +443,36 @@ def token_breakdown(usage):
     }
 
 
+# エラーの二分。**測定の結果であるエラーと、基盤の都合で起きたエラーは別物。**
+#
+# 文脈長を超えて 400 になるのは、その水準でモデルが払った消費の帰結であって、
+# 測定の結果である。引き継いで最終結果に残す（条件を変えて避けない）。
+#
+# 404・接続断・サーバの取り違えは測定の結果ではない。**引き継ぐと、基盤の失敗が
+# 結果として固まってしまう。** 再開時に消して、もう一度回す。実測: 煙試験で
+# 前段のサーバが生き残り、2モデル目の全試行が 404 になった。あれを引き継いだら
+# 「Olmo は解けなかった」という記録になる。
+MEASUREMENT_ERROR_MARKS = (
+    "maximum context length",
+    "reduce the length of the input prompt",
+    "context length",
+)
+
+
+def classify_error(text):
+    """エラーの文面を measurement / infrastructure に分ける。
+
+    **判別できないものは infrastructure に寄せる。** 取りこぼして再実行する損は
+    Pod の数分だが、基盤の失敗を測定結果として残す損は取り返せない。
+    """
+    if not text:
+        return None
+    low = str(text).lower()
+    if any(mark in low for mark in MEASUREMENT_ERROR_MARKS):
+        return "measurement"
+    return "infrastructure"
+
+
 def unsupported_param(exc, kwargs):
     """例外がどのパラメータを拒んでいるかを返す。分からなければ None。
 
@@ -426,7 +489,7 @@ def unsupported_param(exc, kwargs):
     return None
 
 
-def create_completion(client, model, messages, sampling):
+def create_completion(client, model, messages, sampling, repeat=1):
     """sampling を付けて投げる。拒まれたものは落として記録し、投げ直す。
 
     thinking を切る指定は落とさない。**落として黙って続けると、考えさせない
@@ -436,6 +499,10 @@ def create_completion(client, model, messages, sampling):
     while True:
         try:
             kwargs = dict(sampling["used"])
+            # seed はモデルごとの共有状態ではなく、反復ごとに決まる。
+            # サーバに拒まれて落とされていれば "used" に無いので、当てない。
+            if "seed" in kwargs:
+                kwargs["seed"] = seed_for_repeat(repeat)
             if extra:
                 kwargs["extra_body"] = extra
             return client.chat.completions.create(model=model, messages=messages, **kwargs)
@@ -553,7 +620,7 @@ def run_task(client, model, condition, data, task, max_attempts=None, repeat=1, 
 
     for attempt_no in range(1, max_attempts + 1):
         try:
-            response = create_completion(client, model, messages, sampling)
+            response = create_completion(client, model, messages, sampling, repeat)
         except Exception as exc:  # 何が飛んでも、そこまでに消費したトークンは残す
             status = "error"
             error = f"{type(exc).__name__}: {exc}"
@@ -631,6 +698,9 @@ def run_task(client, model, condition, data, task, max_attempts=None, repeat=1, 
         "condition": condition,
         "task_id": task["task_id"],
         "repeat": repeat,
+        # この反復で実際に送った seed。サーバに拒まれて落ちていれば null。
+        # 規則は fingerprint.settings.seed_rule にある。
+        "seed": seed_for_repeat(repeat) if "seed" in sampling["used"] else None,
         "status": status,
         # 最後の応答の素性。実体名が途中で変わった場合は attempt_log を見る。
         "response_model": attempts[-1].get("response_model") if attempts else None,
@@ -646,6 +716,8 @@ def run_task(client, model, condition, data, task, max_attempts=None, repeat=1, 
             (a["thinking_source"] for a in attempts if a.get("thinking_source")), None
         ),
         "error": error,
+        # 測定の結果か、基盤の都合か。再開時に引き継ぐかどうかがこれで決まる。
+        "error_class": classify_error(error),
         "success": success,
         "tokens_measured": tokens_measured,
         "final_answer": answer,
@@ -809,6 +881,9 @@ def main():
             "request_timeout": REQUEST_TIMEOUT,
             "max_retries": MAX_RETRIES,
             "sampling_requested": sampling_params(),
+            # sampling_requested の seed は repeat=1 の値。実際に送る値は
+            # 反復ごとに違い、規則は seed_rule に、送った値は各試行の seed に入る。
+            "seed_rule": SEED_RULE,
             # 中間推論を働かせたかどうか。on と off は別の測定として扱う。
             "thinking_mode": THINKING,
         },
