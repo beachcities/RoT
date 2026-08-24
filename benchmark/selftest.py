@@ -437,6 +437,83 @@ def _():
     assert run_["fingerprint"]["settings"]["sampling_requested"] == rb.sampling_params()
 
 
+# --- 思考のオン/オフ -------------------------------------------------------
+
+
+def with_thinking(mode, fn):
+    """THINKING を一時的に差し替えて実行する。"""
+    saved = rb.THINKING
+    rb.THINKING = mode
+    try:
+        return fn()
+    finally:
+        rb.THINKING = saved
+
+
+@check("thinking: off にすると chat_template_kwargs で切られる")
+def _():
+    on = with_thinking("on", lambda: run("mock-thinking-toggle", max_attempts=1))
+    off = with_thinking("off", lambda: run("mock-thinking-toggle", max_attempts=1))
+    assert on["thinking_chars"], on["thinking_chars"]
+    assert off["thinking_chars"] is None, off["thinking_chars"]
+    # 切ったほうが生成トークンが少ない
+    assert off["completion_tokens"] < on["completion_tokens"], (
+        off["completion_tokens"], on["completion_tokens"])
+
+
+@check("thinking: 送る中身は on で空、off で enable_thinking=False")
+def _():
+    assert with_thinking("on", rb.thinking_body) == {}
+    assert with_thinking("off", rb.thinking_body) == {
+        "chat_template_kwargs": {"enable_thinking": False}}
+
+
+@check("thinking: 結果と指紋に on/off が残り、指紋が別になる")
+def _():
+    import contextlib
+    import io
+
+    argv = ["--mock", "--models", "mock-thinking-toggle", "--suite", "v3_levels",
+            "--conditions", "l6_codes_doc", "--tasks", "task_06", "--repeats", "1",
+            "--no-save"]
+
+    def once():
+        saved = sys.argv
+        sys.argv = ["run_benchmark.py", *argv]
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                return rb.main()
+        finally:
+            sys.argv = saved
+
+    on = with_thinking("on", once)
+    off = with_thinking("off", once)
+    assert on["thinking_mode"] == "on" and off["thinking_mode"] == "off"
+    assert on["fingerprint"]["thinking_mode"] == "on"
+    assert off["fingerprint"]["settings"]["thinking_mode"] == "off"
+    # 指紋が別なら、途中経過の置き場所も別になる（混ざらない）
+    assert rb.partial_path(on["fingerprint"]) != rb.partial_path(off["fingerprint"])
+
+
+@check("thinking: off を受け付けないサーバなら止まる（黙って続けない）")
+def _():
+    class _Refusing:
+        class chat:
+            class completions:
+                @staticmethod
+                def create(**kwargs):
+                    raise RuntimeError("unknown field enable_thinking")
+
+    sampling = {"requested": {}, "used": {}, "dropped": {}}
+    try:
+        with_thinking("off", lambda: rb.create_completion(
+            _Refusing(), "m", [{"role": "user", "content": "x"}], sampling))
+    except SystemExit as exc:
+        assert "成立しない" in str(exc), exc
+    else:
+        raise AssertionError("受け付けられなくても続行してしまった")
+
+
 # --- 思考のトークン数 ------------------------------------------------------
 
 

@@ -216,6 +216,22 @@ def s_think_field(ctx):
     )
 
 
+def s_thinking_toggle(ctx):
+    """enable_thinking の指定に従うモデル。切り替えの経路を踏むためのもの。
+
+    Qwen 系は chat_template_kwargs で思考を切れる。切れていれば思考は出さず、
+    生成トークンも少なくなる。
+    """
+    kwargs = getattr(ctx, "kwargs", {}) or {}
+    extra = kwargs.get("extra_body") or {}
+    template = extra.get("chat_template_kwargs") or {}
+    if template.get("enable_thinking") is False:
+        return _response(_correct(ctx), _usage(420, 12), model="mock-thinking-toggle")
+    think = "切り替えが効いていなければ、この思考が出る。"
+    return _response(think + "</think>" + chr(10) * 2 + _correct(ctx),
+                     _usage(420, 260), model="mock-thinking-toggle")
+
+
 def s_think_close(ctx):
     """終了タグだけを返すモデル（開始タグはチャットテンプレート側にある形）。
 
@@ -288,6 +304,7 @@ SCENARIOS = {
     "mock-error-midway": s_error_midway,
     "mock-think-inline": s_think_inline,
     "mock-think-close": s_think_close,
+    "mock-thinking-toggle": s_thinking_toggle,
     "mock-think-alt-tag": s_think_alt_tag,
     "mock-think-field": s_think_field,
     "mock-no-temperature": s_no_temperature,

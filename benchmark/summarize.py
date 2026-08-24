@@ -314,6 +314,7 @@ def summarize(run):
         "tasks": task_ids,
         "suite": run.get("suite"),
         "prompt_set": run.get("prompt_set"),
+        "thinking_mode": run.get("thinking_mode"),
         "max_attempts": run.get("max_attempts"),
         "condition_spec": run.get("condition_spec"),
         "repeats": run.get("repeats"),
@@ -441,6 +442,8 @@ def render(summary):
         label = f"組: {summary['suite']}"
         if summary.get("prompt_set"):
             label += f"  /  プロンプト: {summary['prompt_set']}"
+        if summary.get("thinking_mode"):
+            label += f"  /  thinking: {summary['thinking_mode']}"
         lines.append(label + "  （どちらかが違えば数値は比較できない）")
     lines.append("=" * 78)
 

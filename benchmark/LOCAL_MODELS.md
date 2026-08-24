@@ -111,7 +111,7 @@ Colab Pro+ の A100 は 40GB で、7B は載るが 32B は載らない。
 | 事象 | 対処 |
 | --- | --- |
 | Colab イメージの torch (CUDA 13.0) と torchaudio (12.8) が食い違い、vLLM の import が落ちる | `torchaudio` を削除。テキスト推論には要らない |
-| `--reasoning-parser deepseek_r1` が起動失敗（`<think>` が単一トークンでないと使えない） | パーサ無しで起動。**この vLLM 0.27.1 には reasoning-parser が1件も登録されていなかった**（`ReasoningParserManager` が空） |
+| `--reasoning-parser deepseek_r1` が起動失敗（`<think>` が単一トークンでないと使えない） | パーサ無しで起動。**「1件も登録されていない」と書いたのは誤り**（→ 下の「パーサについての訂正」） |
 | `colab exec` の既定タイムアウトが30秒 | `--timeout` を明示 |
 | A100 は CLI 経路では 40GB、セッションは 61.5 分で切れる | プローブに切り分けた |
 
@@ -497,3 +497,91 @@ python count_thinking.py results/reference/run_20260823T124213Z.json
 なお、このランは `thinking_source` を記録する前のものなので、**どの経路で取り出したかは
 `null` のまま**である（実際には `closing_tag` だったが、結果ファイルからは判定できない
 ので埋めていない）。以後のランには入る。
+
+---
+
+# パーサについての訂正（2026-08-24）
+
+以前この文書に「**この vLLM 0.27.1 には reasoning-parser が1件も登録されていなかった**」と
+書いた。**これは誤りである。**
+
+`ReasoningParserManager.reasoning_parsers` を見て空だったので「登録が無い」と読んだが、
+**登録は遅延で行われる**（`lazy_parsers` / `register_lazy_module`）。実際に引くと解決する。
+
+```
+登録されているパーサ（28件）:
+  cohere_command3, cohere_command4, deepseek_r1, deepseek_v3, deepseek_v4, ernie45,
+  gemma4, glm45, glm47, granite, holo2, hunyuan_a13b, hy_v3, inkling, kimi_k2, kimi_k3,
+  mimo, minimax_m2, minimax_m2_append_think, minimax_m3, mistral, nemotron_v3,
+  olmo3, openai_gptoss, poolside_v1, qwen3, seed_oss, step3, step3p5
+```
+
+**`olmo3` パーサも存在する。** Olmo のランは `--reasoning-parser olmo3` で回せたことになる。
+当時 `deepseek_r1` が落ちたのは、登録が無かったからではなく、そのパーサが `<think>` を
+単一トークンとして要求し、Olmo のトークナイザがそれを持たなかったため。
+
+## それでもパーサは使わない
+
+`Qwen/Qwen3.5-9B` を `--reasoning-parser qwen3` 付きで起動して確かめた結果、
+**パーサを付けると思考テキストが失われる**。
+
+| 構成 | `reasoning_content` | `usage.completion_tokens_details` |
+| --- | --- | --- |
+| パーサ **有り** | **0字**（`finish_reason: stop`、`completion_tokens: 4011` でも空） | **無い** |
+| パーサ **無し** | — （`content` に `</think>` 込みで残る） | **無い** |
+
+`completion_tokens_details` 自体が応答に無く、**どちらの構成でも `reasoning_tokens` は
+返らない**。したがって「サーバが返した値と、数え直した値を突き合わせる」という検証は、
+この vLLM では成立しない。
+
+パーサ無しの応答（`17+25` を問うたもの、`completion_tokens: 3536`）:
+
+> `content 12,584字 / <think> あり: False / </think> あり: True`
+> 先頭: `Thinking Process:\n\n1.  **Analyze the Request:** …`
+> 末尾: `…17 + 25 の計算結果は 42 です。\n    42\n</think>\n\n17 + 25 の計算結果は 42 です。\n42`
+
+Qwen も Olmo と同じ `closing_tag` 経路になる。**パーサは付けない。**
+
+# 近似の検証（確定値）
+
+`reasoning_tokens` が返らなくても `completion_tokens` は返る。生成本文は
+「思考 + タグ + 最終回答」なので、
+
+    残差 = completion_tokens - (数えた思考 + 数えた最終回答)
+
+が、切り出しで落としたぶんにあたる。**Olmo-3-7B-Think の76試行**で実測した。
+
+| | 値 |
+| --- | --- |
+| 残差の中央値 | **4 トークン** |
+| 残差の範囲 | **0 〜 8 トークン** |
+| `completion_tokens` に対する割合（中央） | **0.06%** |
+| 同（最大） | **0.72%** |
+
+残差は `</think>` と前後の改行ぶんに相当する。**「数え直した値は下限寄りの近似」という
+見立ては正しく、ずれは1試行あたり数トークン**である。`count_thinking.py --verify` で
+再現できる。
+
+# Qwen を足すことについて
+
+`Qwen/Qwen3.5-9B`（9.7B、Apache-2.0）を1つ足す。位置づけは
+**「OSAID を満たす系統で本筋を測り、オープンウェイトも一つ見た」**という形。
+
+> **Qwen はオープンウェイトであり、学習データは公開されていない。**
+> OSI の [Open Source AI Definition](https://opensource.org/ai/open-source-ai-definition)
+> は満たさない。OSAID を満たすのは OLMo 3 の側で、本筋の測定はそちらで行っている。
+
+## 中間推論のオン/オフ
+
+Qwen は `chat_template_kwargs` で思考を切れる。`THINKING=off` で
+`{"chat_template_kwargs": {"enable_thinking": False}}` を送る。
+
+**`THINKING` は指紋に入る**（`fingerprint.thinking_mode` と
+`fingerprint.settings.thinking_mode`）。on と off は別の測定なので、途中経過の置き場所も
+別になり、片方の続きにもう片方が積まれることはない。
+
+サーバが `enable_thinking` を受け付けなかった場合は**その場で止まる**。落として黙って
+続けると、考えさせないつもりの測定が考えさせた測定になるため。
+
+1問（`17+25`）での観測: thinking on の `completion_tokens` 3,536 に対し、
+off は 18。**196倍**。これは1問の観測であって測定ではない。

@@ -177,6 +177,23 @@ SUITE = os.getenv("SUITE", "v3_levels")
 # 空なら空のまま残す。後から推測で埋めない。
 RUN_ROUTE = os.getenv("RUN_ROUTE", "")
 
+# 中間推論を働かせるかどうか。off にすると chat_template_kwargs で
+# enable_thinking=False を送る（Qwen 系など、切り替えを持つモデル向け）。
+# 同じモデル・同じ課題で、考えさせた場合と考えさせない場合を比べるために要る。
+#
+# **切り替えは指紋に入れる。** on と off は別の測定なので、混ざってはいけない。
+# 途中経過の置き場所も指紋から決まるので、片方の続きにもう片方が積まれることはない。
+THINKING = os.getenv("THINKING", "on").strip().lower()
+if THINKING not in ("on", "off"):
+    raise SystemExit(f"環境変数 THINKING は on か off である必要があります: {THINKING!r}")
+
+
+def thinking_body():
+    """chat_template_kwargs に載せるもの。on のときは何も送らない（既定に任せる）。"""
+    if THINKING == "off":
+        return {"chat_template_kwargs": {"enable_thinking": False}}
+    return {}
+
 
 def env_float(name, default):
     raw = os.getenv(name)
@@ -410,13 +427,24 @@ def unsupported_param(exc, kwargs):
 
 
 def create_completion(client, model, messages, sampling):
-    """sampling を付けて投げる。拒まれたものは落として記録し、投げ直す。"""
+    """sampling を付けて投げる。拒まれたものは落として記録し、投げ直す。
+
+    thinking を切る指定は落とさない。**落として黙って続けると、考えさせない
+    つもりの測定が考えさせた測定になる。** 拒まれたらそこで止める。
+    """
+    extra = thinking_body()
     while True:
         try:
-            return client.chat.completions.create(
-                model=model, messages=messages, **sampling["used"]
-            )
+            kwargs = dict(sampling["used"])
+            if extra:
+                kwargs["extra_body"] = extra
+            return client.chat.completions.create(model=model, messages=messages, **kwargs)
         except Exception as exc:
+            if extra and "enable_thinking" in f"{exc}":
+                raise SystemExit(
+                    "THINKING=off を指定しましたが、サーバが enable_thinking を"
+                    f"受け付けませんでした。測定として成立しないので止めます: {exc}"
+                )
             name = unsupported_param(exc, sampling["used"])
             if name is None:
                 raise
@@ -750,7 +778,7 @@ def main():
 
     cells = len(models) * len(conditions) * len(tasks)
     print(
-        f"組 {suite} / プロンプト {prompt_set}: "
+        f"組 {suite} / プロンプト {prompt_set} / thinking {THINKING}: "
         f"{cells} セル x 反復 {repeats} 回 = {cells * repeats} 回の実行"
     )
 
@@ -781,8 +809,11 @@ def main():
             "request_timeout": REQUEST_TIMEOUT,
             "max_retries": MAX_RETRIES,
             "sampling_requested": sampling_params(),
+            # 中間推論を働かせたかどうか。on と off は別の測定として扱う。
+            "thinking_mode": THINKING,
         },
         "sampling": digest(sampling_params()),
+        "thinking_mode": THINKING,
     }
 
     # 途中経過。1試行ごとに書き足すので、落ちてもそこまでは残る。
@@ -856,6 +887,8 @@ def main():
             "openai_sdk": sdk_version(),
             "platform": sys.platform,
         },
+        # 中間推論を働かせたか。off なら chat_template_kwargs で切っている。
+        "thinking_mode": THINKING,
         # 実行経路。RUN_ROUTE は人が書くもので、空なら記録していないという意味。
         "route": {
             "note": RUN_ROUTE,
