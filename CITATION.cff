@@ -1,14 +1,12 @@
 cff-version: 1.2.0
 message: "If you use or cite this work, please cite it as below. A DOI will be added here once the first Zenodo-archived release is created."
-title: "RoT — Return on Token: A Discussion Paper on Reducing Compute Waste from the Data Side"
+title: "RoT - Return on Token: A Discussion Paper on Reducing Compute Waste from the Data Side"
 authors:
   - family-names: "Yamada"
     given-names: "Masayuki"
 type: software
 repository-code: "https://github.com/beachcities/RoT"
-license:
-  - Apache-2.0
-  - CC-BY-4.0
+license: Apache-2.0
 keywords:
   - open data
   - self-describing data
@@ -21,4 +19,5 @@ abstract: >-
   self-description of data governs it. Includes a minimal benchmark that
   varies the level of self-description and measures token consumption
   per outcome, with results and full reproduction steps. The Japanese
-  text (paper/return-on-token.md) is authoritative.
+  text (paper/return-on-token.md) is authoritative. Documents are
+  licensed CC BY 4.0; code and data Apache-2.0 (see LICENSE-NOTICE.md).
