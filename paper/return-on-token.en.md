@@ -10,6 +10,10 @@ This is a discussion paper. It proposes Return on Token (ROT), an indicator that
 
 The acronym invites an obvious reading. Whether it applies to the indicator or to what we currently do with our tokens is, I think, the open question.
 
+This paper is archived on Zenodo with every release. The DOI [10.5281/zenodo.22090097](https://doi.org/10.5281/zenodo.22090097) represents all versions and always resolves to the latest.
+
+A note on the name. "Return on Token(s)" is used in several other contexts independently of this paper — mostly, as far as I can tell, to mean a financial rate of return on token spend. The ROT proposed here is a different quantity: a measurable ratio of outcome to total tokens consumed, with recursive tokens included in the denominator, so both the formula and the object differ.
+
 Sources cited are listed in [`REFERENCES.en.md`](REFERENCES.en.md).
 
 ---
