@@ -230,6 +230,9 @@ def main():
     p.add_argument("--name", default="rot-smoke")
     p.add_argument("--out", default=str(BENCH / "results" / "runpod"))
     p.add_argument("--carry", default="", help="持ち込む途中経過のディレクトリ")
+    p.add_argument("--commit", default="",
+                   help="clone をこのコミットに固定する。中断した測定を続けるときは、"
+                        "途中経過の指紋にあるコミットを渡すこと")
     p.add_argument("--use-local", action="store_true",
                    help="push していない手元のコードを clone の上に被せる")
     p.add_argument("--terminate-margin", type=int, default=600,
@@ -261,6 +264,8 @@ def main():
         "ROT_DEADLINE_SEC": str(max(60, seconds - 900)),
         "ROT_ROUTE": f"RunPod 経路 / runpod/runpod_run.py / {args.cloud} / {GPU_ID}",
     }
+    if args.commit:
+        env_vars["ROT_COMMIT"] = args.commit
     if args.stop_after_trials:
         env_vars["ROT_STOP_AFTER_TRIALS"] = str(args.stop_after_trials)
     if args.dry_run:

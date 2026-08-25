@@ -42,6 +42,14 @@ log "vllm 導入まで ${t_install}s"
 
 if [ ! -d /workspace/RoT ]; then
   git clone --depth 1 https://github.com/beachcities/RoT.git /workspace/RoT || exit 1
+  # **指紋はコミットを含む。** 中断した測定を続けるときは、その時のコミットに
+  # 揃えないと途中経過が弾かれ、最初から回し直しになる（実測: 稿側の更新で
+  # origin/main が進み、再開できなくなりかけた）。
+  if [ -n "${ROT_COMMIT:-}" ]; then
+    log "コミットを ${ROT_COMMIT} に固定する"
+    git -C /workspace/RoT fetch --depth 1 origin "${ROT_COMMIT}" || exit 1
+    git -C /workspace/RoT checkout -q FETCH_HEAD || exit 1
+  fi
 fi
 # push していない手元のコードがあれば被せる（clone との差分になり、指紋に dirty と残る）
 if [ -d /workspace/local ] && [ -n "$(ls -A /workspace/local 2>/dev/null)" ]; then
