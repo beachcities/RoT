@@ -1,5 +1,7 @@
 # RoT — Return on Token
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22090097.svg)](https://doi.org/10.5281/zenodo.22090097)
+
 計算資源の消費を、データ側から減らせるのではないか。その見立てを試論としてまとめ、検証可能な形にするためのリポジトリです。
 
 ## 内容
@@ -33,6 +35,12 @@
 ## このリポジトリについて
 
 これは個人として進めている試論であり、いかなる組織の見解を示すものでもありません。運営も個人の時間で行っているため、Issue や Pull Request への対応は不定期になります。その点をご了承のうえでお寄せいただければ幸いです。
+
+## 引用
+
+本リポジトリは版ごとにZenodoへアーカイブされています。全版を束ねるDOIは [10.5281/zenodo.22090097](https://doi.org/10.5281/zenodo.22090097)（常に最新版を指します）。
+
+> Yamada, Masayuki (2026). *RoT — Return on Token: A Discussion Paper on Reducing Compute Waste from the Data Side.* Zenodo. https://doi.org/10.5281/zenodo.22090097
 
 ## フィードバックのお願い
 
