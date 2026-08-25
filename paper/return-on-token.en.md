@@ -178,6 +178,16 @@ The boundary appeared at the same place (l5→l6) under both conditions. The ste
 
 What ran against expectation was that enabling thinking produced fewer errors. Context-length overruns numbered four with thinking off and zero with it on. Reading the input and output breakdowns of the two runs, the picture appears to be that with thinking off the answers themselves grow long and accumulate in the conversation history, whereas the thinking is extracted and never carried forward — but this is a reading of the two runs against each other, not a controlled experiment. At the least, on this task, making the model think less was not the cheaper option.
 
+### Five Repetitions: The Step Stands an Order Above the Spread
+
+The three locally served systems (Olmo-3-7B-Think, and Qwen3.5-9B with thinking on and off) were rerun across all ten levels and both tasks with five repetitions, changing the seed for each. The runtime differs from the reference route (A100-80GB rather than A100-40GB), so this is treated as a separate route and not merged with the reference figures.
+
+The boundary appeared at the same place (l5→l6) in all three systems. The step was 32.6× for Olmo, 22.2× for Qwen with thinking, and 32.1× without (ratios of five-repetition totals per level). Below l6, correct answers numbered 2/30 for Olmo, 4/30 for Qwen with thinking, and 0/30 without; at l6 and above, all three scored 20/20. On this route the thinking-off trials fit within the context length through l5, so the gap noted two subsections above — no symmetrically comparable step on the thinking-off side — is now filled, albeit on a separate route (fourteen errors occurred, all context-length overruns; they are recorded, and no condition was changed).
+
+The purpose of the repetitions was to compare the step against the spread. Per-repetition totals ranged from 37,582 to 204,233 tokens within levels below l6, and from 2,734 to 5,258 at l6 and above — the within-level spread tops out at 2.7×, so the six levels below the boundary cannot be told apart from each other, nor can the four above it. The only separation the data supports is between the two groups, and that separation (22–33×) stands an order of magnitude above the spread. **That the boundary is not noise can now be said with repetitions behind it.**
+
+A by-product: the limits of reproducibility were also measured. The first repetition of each system steps on the same seeds as the reference runs and should, under identical conditions, reproduce them; in fact only 1 to 8 cells of 20 matched, all of them cheap single-attempt cells. The measured quantities — token counts, attempt counts, outcomes — compare across hardware (the boundary's position and the step's order of magnitude agree), but token sequences themselves do not travel.
+
 ### The Derivation from Operational Logs Actually Ran
 
 Section 6 sets out, as a hypothesis, the idea of working backwards from logs to a requirements specification. Against this reasoning text, it could be tried.
@@ -223,7 +233,7 @@ Seven identifiers have now been enumerated and closed, but there is no way to sh
 - **This indicator cannot read differences in effect by model capability.** The size of the step (23.4 / 29.3 / 14.5 / 30.2 / 25.5) does not follow model capability; it tracks the length of the response at the ceiling. The step is a ratio of "ten attempts to one," so it is determined by the ceiling setting and the response length. The hypothesis that lighter models benefit more from self-description is therefore not refuted but **unanswerable by this measurement**. A different indicator is needed. That the same model, on the same unsolved trial run to the same ten-attempt ceiling (l2), consumed roughly 1.8 times as much with thinking off as with it on is consistent with the same reading: what moves the numbers is response length, not capability.
 - **The training side was not measured.** As noted at the end of Section 4, self-description should tell there too, but every measurement here concerns inference.
 - **Nor was the framing side.** The same hypothesis in Section 4: here the questions were fixed and supplied.
-- **Two tasks, synthetic toy data.** Whether the same shape holds for real data or other tasks has not been measured. Both locally served lines (Olmo and Qwen) used a single repetition, so variance across levels could not be assessed either.
+- **Two tasks, synthetic toy data.** Whether the same shape holds for real data or other tasks has not been measured. The five-repetition measurements ran on hardware different from the reference route, so within-level variance on identical hardware has not been obtained.
 
 ---
 
