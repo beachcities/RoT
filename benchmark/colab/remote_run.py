@@ -66,6 +66,16 @@ def overlay_local():
 def prepare():
     if not os.path.isdir("/content/RoT"):
         subprocess.run(["git", "clone", "--depth", "1", REPO, "/content/RoT"], check=True)
+        # **指紋はコミットを含む。** 区間をまたいで続けるとき、その間に
+        # origin/main が進むと途中経過が弾かれて最初から回し直しになる
+        # （RunPod 経路で実測。稿側の更新で踏みかけた）。開始時のコミットに固定する。
+        commit = env("ROT_COMMIT")
+        if commit:
+            log(f"コミットを {commit} に固定する")
+            subprocess.run(["git", "-C", "/content/RoT", "fetch", "--depth", "1",
+                            "origin", commit], check=True)
+            subprocess.run(["git", "-C", "/content/RoT", "checkout", "-q", "FETCH_HEAD"],
+                           check=True)
     commit = subprocess.run(["git", "-C", "/content/RoT", "rev-parse", "HEAD"],
                             capture_output=True, text=True).stdout.strip()
     log("commit:", commit)

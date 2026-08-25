@@ -119,6 +119,7 @@ def run_segment(session, args, index):
             f"'ROT_MAX_MODEL_LEN': '{args.max_model_len}',"
             f"'ROT_USE_LOCAL': '{'1' if args.use_local else '0'}',"
             f"'ROT_CONDITIONS': '{args.conditions}',"
+            f"'ROT_COMMIT': '{args.commit}',"
             f"'ROT_ROUTE': 'Colab CLI 経路 / colab/drive_cli_run.py'}})\n"
             "runpy.run_path('/content/remote_run.py', run_name='__main__')\n"
         )
@@ -166,6 +167,9 @@ def main():
     parser.add_argument("--model", default="Qwen/Qwen3.5-9B")
     parser.add_argument("--tasks", default="task_04,task_06")
     parser.add_argument("--suite", default="v3_levels")
+    parser.add_argument("--commit", default="",
+                        help="clone をこのコミットに固定する。区間をまたぐ間に "
+                             "origin/main が進んでも途中経過が弾かれない")
     parser.add_argument("--conditions", default="",
                         help="水準を絞る（事前確認に使う。既定は組の全水準）")
     parser.add_argument("--repeats", default="1")
