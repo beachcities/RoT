@@ -89,7 +89,15 @@ def carry_files():
 def run_segment(session, args, index):
     """1区間ぶん。完走したら結果ファイルのパスを返す。"""
     print(f"\n=== 区間 {index} ===", flush=True)
-    colab("new", "-s", session, "--gpu", args.gpu, timeout=900)
+    # セッション作成は落ちることがある（実測: 区間2で `colab new` が失敗し、
+    # そこで走行全体が終わった）。**1回だけ**やり直す。連続で駄目なら、
+    # 在庫かセッション上限かの切り分けは後回しにして、ここで止める。
+    first = colab("new", "-s", session, "--gpu", args.gpu, timeout=900, check=False)
+    if first.returncode != 0:
+        print("  セッションを作れなかった。60秒おいて1回だけやり直す", flush=True)
+        print("    " + (first.stderr or first.stdout or "").strip()[:400], flush=True)
+        time.sleep(60)
+        colab("new", "-s", session, "--gpu", args.gpu, timeout=900)
     try:
         ensure_dirs(session)
         for f in carry_files():
