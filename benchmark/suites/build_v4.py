@@ -113,6 +113,10 @@ def main():
                 conditions.append({
                     "name": name, "file": f"{name}.json",
                     "t": t, "d": d, "arm": arm,
+                    # **既定は「振る」で確定。** スモークで固定側は 8/10 が同一の誤答に
+                    # 集中し、変種の癖が壊れ方の指紋を汚すことが実測された
+                    # （run_20260826T030829Z）。固定側は比較のために残すが使わない。
+                    "default": arm == "varied",
                     "gamma": gamma(t, d),
                     "unknown_codes": 6 - t - d,
                     "targets_unwritten": 2 - t,

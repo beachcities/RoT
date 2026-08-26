@@ -1330,6 +1330,63 @@ def _():
     assert abs(sv4.entropy([5, 5]) - 1.0) < 1e-12
 
 
+@check("計器v2: 0回答を数え分ける（山推定は変えない）")
+def _():
+    import importlib.util
+    root = pathlib.Path(__file__).resolve().parent
+    spec = importlib.util.spec_from_file_location("sv4", root / "summarize_v4.py")
+    sv4 = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(sv4)
+    rows = [{"final_number": v, "total_tokens": 10, "status": "ok"}
+            for v in (0, 0, 228, 186, 186)]
+    d = sv4.describe(rows, 228, 1 / 6)
+    assert d["0回答数"] == 2, d["0回答数"]
+    # 0 は山からは外さない（値として数直線に載る）
+    assert sum(m["件数"] for m in d["山"]) == 5
+    assert d["正解山の占有率"] == 1 / 5
+
+
+@check("計器v2: 色は数値の規則だけで決まる")
+def _():
+    import importlib.util
+    root = pathlib.Path(__file__).resolve().parent
+    spec = importlib.util.spec_from_file_location("v4g", root / "v4_grid.py")
+    v4g = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(v4g)
+    assert v4g.verdict(0.50, 0.167) == "above"
+    assert v4g.verdict(0.00, 0.167) == "below"
+    assert v4g.verdict(0.20, 0.167) == "near"      # ±0.05 以内
+    assert v4g.verdict(0.10, 0.167) == "below"
+    # 同じ座標に両腕があれば、既定の「振る」を出す
+    cells = {"a": {"t": 0, "d": 2, "arm": "fixed"}, "b": {"t": 0, "d": 2, "arm": "varied"}}
+    assert v4g.cell_at(cells, 0, 2)["arm"] == "varied"
+
+
+@check("計器v2: 可読出力が外部を読まない一枚になっている")
+def _():
+    import importlib.util
+    import re
+    root = pathlib.Path(__file__).resolve().parent
+    spec = importlib.util.spec_from_file_location("v4g", root / "v4_grid.py")
+    v4g = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(v4g)
+    run = {"run_at": "T", "models": ["m"], "thinking_mode": "on", "max_attempts": 1,
+           "repeats": 2, "fingerprint": {"inputs": "abc"},
+           "inputs": {"tasks": [{"ground_truth": "228"}]},
+           "condition_spec": [{"name": "c", "t": 0, "d": 2, "arm": "varied", "gamma": 1 / 6}],
+           "results": [{"condition": "c", "status": "ok", "final_answer": "228",
+                        "total_tokens": 10, "repeat": 1},
+                       {"condition": "c", "status": "ok", "final_answer": "0",
+                        "total_tokens": 10, "repeat": 2}]}
+    page = v4g.render_html(run, v4g.collect(run))
+    # CDN も外部 JS も読まない。単体で開ける。
+    assert not re.search(r"(?i)(<script|src=|href=[\"']http|@import|url\(http)", page), "外部参照がある"
+    assert "<style>" in page and "凡例" in page
+    # 壊れ方の型のラベルは付けない（帰属判断を混ぜない）
+    for word in ("散る", "割れる", "ずれる"):
+        assert word not in page, word
+
+
 def main():
     rb.configure_stdout()
     failed = 0

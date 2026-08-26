@@ -75,7 +75,11 @@ def describe(rows, truth, gamma):
             correct_group = g
             break
     counts = list(Counter(values).values())
+    # 「対応がデータに無いので該当0」と述べて 0 を答える型。誤答とは性質が違うので
+    # 数え分ける。**山推定には手を入れない**（0 も1つの値として山に入る）。
+    zeros = sum(1 for v in values if v == 0)
     return {
+        "0回答数": zeros,
         "標本数": n,
         "数値が取れた": len(answered),
         "山の数": len(groups),
@@ -128,7 +132,7 @@ def main():
     print(f"seed 群 {sorted({r.get('seed') for r in run['results']})}")
     print()
     header = (f"{'条件':18s} {'n':>3s} {'山':>3s} {'最大山':>7s} {'正解山':>7s} "
-              f"{'γ':>7s} {'エントロピー':>12s} {'総token':>9s}")
+              f"{'γ':>7s} {'エントロピー':>12s} {'0回答':>5s} {'総token':>9s}")
     print(header)
     print("-" * len(header))
     out = {}
@@ -139,7 +143,7 @@ def main():
         print(f"{name:18s} {d['標本数']:>3d} {d['山の数']:>3d} "
               f"{d['最大山の占有率']:>7.2f} {d['正解山の占有率']:>7.2f} "
               f"{(g if g is not None else float('nan')):>7.3f} "
-              f"{d['回答エントロピー']:>12.3f} {d['総トークン']:>9,}")
+              f"{d['回答エントロピー']:>12.3f} {d['0回答数']:>5d} {d['総トークン']:>9,}")
     print()
     for name in sorted(by):
         print(f"{name} の山:")
