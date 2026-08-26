@@ -1,0 +1,416 @@
+{
+  "master_seeds": [
+    20261001,
+    20261002,
+    20261003,
+    20261004,
+    20261005,
+    20261006,
+    20261007,
+    20261008,
+    20261009,
+    20261010,
+    20261011,
+    20261012
+  ],
+  "total_samples": 200,
+  "conditions": [
+    {
+      "name": "t0_d0",
+      "file": "t0_d0.json",
+      "t": 0,
+      "d": 0,
+      "V": 1,
+      "H": 15,
+      "log2H": 3.9068905956085187,
+      "gamma": 0.06666666666666667,
+      "unknown_codes": 6,
+      "targets_unwritten": 2,
+      "design": {
+        "n": 12,
+        "variants": 1,
+        "seeds_per_variant": 12,
+        "seeds": [
+          20261001,
+          20261002,
+          20261003,
+          20261004,
+          20261005,
+          20261006,
+          20261007,
+          20261008,
+          20261009,
+          20261010,
+          20261011,
+          20261012
+        ]
+      },
+      "arm": "varied",
+      "series": "threshold"
+    },
+    {
+      "name": "t0_d1",
+      "file": "t0_d1.json",
+      "t": 0,
+      "d": 1,
+      "V": 4,
+      "H": 10,
+      "log2H": 3.321928094887362,
+      "gamma": 0.1,
+      "unknown_codes": 5,
+      "targets_unwritten": 2,
+      "design": {
+        "n": 12,
+        "variants": 4,
+        "seeds_per_variant": 3,
+        "seeds": [
+          20261001,
+          20261002,
+          20261003
+        ]
+      },
+      "arm": "varied",
+      "series": "threshold"
+    },
+    {
+      "name": "t0_d2",
+      "file": "t0_d2.json",
+      "t": 0,
+      "d": 2,
+      "V": 6,
+      "H": 6,
+      "log2H": 2.584962500721156,
+      "gamma": 0.16666666666666666,
+      "unknown_codes": 4,
+      "targets_unwritten": 2,
+      "design": {
+        "n": 12,
+        "variants": 6,
+        "seeds_per_variant": 2,
+        "seeds": [
+          20261001,
+          20261002
+        ]
+      },
+      "arm": "varied",
+      "series": "threshold"
+    },
+    {
+      "name": "t0_d3",
+      "file": "t0_d3.json",
+      "t": 0,
+      "d": 3,
+      "V": 4,
+      "H": 3,
+      "log2H": 1.584962500721156,
+      "gamma": 0.3333333333333333,
+      "unknown_codes": 3,
+      "targets_unwritten": 2,
+      "design": {
+        "n": 12,
+        "variants": 4,
+        "seeds_per_variant": 3,
+        "seeds": [
+          20261001,
+          20261002,
+          20261003
+        ]
+      },
+      "arm": "varied",
+      "series": "threshold"
+    },
+    {
+      "name": "t0_d4",
+      "file": "t0_d4.json",
+      "t": 0,
+      "d": 4,
+      "V": 1,
+      "H": 1,
+      "log2H": 0.0,
+      "gamma": 1.0,
+      "unknown_codes": 2,
+      "targets_unwritten": 2,
+      "design": {
+        "n": 12,
+        "variants": 1,
+        "seeds_per_variant": 12,
+        "seeds": [
+          20261001,
+          20261002,
+          20261003,
+          20261004,
+          20261005,
+          20261006,
+          20261007,
+          20261008,
+          20261009,
+          20261010,
+          20261011,
+          20261012
+        ]
+      },
+      "arm": "varied",
+      "series": "threshold"
+    },
+    {
+      "name": "t1_d0",
+      "file": "t1_d0.json",
+      "t": 1,
+      "d": 0,
+      "V": 2,
+      "H": 5,
+      "log2H": 2.321928094887362,
+      "gamma": 0.2,
+      "unknown_codes": 5,
+      "targets_unwritten": 1,
+      "design": {
+        "n": 12,
+        "variants": 2,
+        "seeds_per_variant": 6,
+        "seeds": [
+          20261001,
+          20261002,
+          20261003,
+          20261004,
+          20261005,
+          20261006
+        ]
+      },
+      "arm": "varied",
+      "series": "threshold"
+    },
+    {
+      "name": "t1_d1",
+      "file": "t1_d1.json",
+      "t": 1,
+      "d": 1,
+      "V": 8,
+      "H": 4,
+      "log2H": 2.0,
+      "gamma": 0.25,
+      "unknown_codes": 4,
+      "targets_unwritten": 1,
+      "design": {
+        "n": 16,
+        "variants": 8,
+        "seeds_per_variant": 2,
+        "seeds": [
+          20261001,
+          20261002
+        ]
+      },
+      "arm": "varied",
+      "series": "threshold"
+    },
+    {
+      "name": "t1_d2",
+      "file": "t1_d2.json",
+      "t": 1,
+      "d": 2,
+      "V": 12,
+      "H": 3,
+      "log2H": 1.584962500721156,
+      "gamma": 0.3333333333333333,
+      "unknown_codes": 3,
+      "targets_unwritten": 1,
+      "design": {
+        "n": 24,
+        "variants": 12,
+        "seeds_per_variant": 2,
+        "seeds": [
+          20261001,
+          20261002
+        ]
+      },
+      "arm": "varied",
+      "series": "threshold"
+    },
+    {
+      "name": "t1_d3",
+      "file": "t1_d3.json",
+      "t": 1,
+      "d": 3,
+      "V": 8,
+      "H": 2,
+      "log2H": 1.0,
+      "gamma": 0.5,
+      "unknown_codes": 2,
+      "targets_unwritten": 1,
+      "design": {
+        "n": 16,
+        "variants": 8,
+        "seeds_per_variant": 2,
+        "seeds": [
+          20261001,
+          20261002
+        ]
+      },
+      "arm": "varied",
+      "series": "threshold"
+    },
+    {
+      "name": "t1_d4",
+      "file": "t1_d4.json",
+      "t": 1,
+      "d": 4,
+      "V": 2,
+      "H": 1,
+      "log2H": 0.0,
+      "gamma": 1.0,
+      "unknown_codes": 1,
+      "targets_unwritten": 1,
+      "design": {
+        "n": 12,
+        "variants": 2,
+        "seeds_per_variant": 6,
+        "seeds": [
+          20261001,
+          20261002,
+          20261003,
+          20261004,
+          20261005,
+          20261006
+        ]
+      },
+      "arm": "varied",
+      "series": "threshold"
+    },
+    {
+      "name": "t2_d0",
+      "file": "t2_d0.json",
+      "t": 2,
+      "d": 0,
+      "V": 1,
+      "H": 1,
+      "log2H": 0.0,
+      "gamma": 1.0,
+      "unknown_codes": 4,
+      "targets_unwritten": 0,
+      "design": {
+        "n": 12,
+        "variants": 1,
+        "seeds_per_variant": 12,
+        "seeds": [
+          20261001,
+          20261002,
+          20261003,
+          20261004,
+          20261005,
+          20261006,
+          20261007,
+          20261008,
+          20261009,
+          20261010,
+          20261011,
+          20261012
+        ]
+      },
+      "arm": "varied",
+      "series": "lapse"
+    },
+    {
+      "name": "t2_d1",
+      "file": "t2_d1.json",
+      "t": 2,
+      "d": 1,
+      "V": 4,
+      "H": 1,
+      "log2H": 0.0,
+      "gamma": 1.0,
+      "unknown_codes": 3,
+      "targets_unwritten": 0,
+      "design": {
+        "n": 12,
+        "variants": 4,
+        "seeds_per_variant": 3,
+        "seeds": [
+          20261001,
+          20261002,
+          20261003
+        ]
+      },
+      "arm": "varied",
+      "series": "lapse"
+    },
+    {
+      "name": "t2_d2",
+      "file": "t2_d2.json",
+      "t": 2,
+      "d": 2,
+      "V": 6,
+      "H": 1,
+      "log2H": 0.0,
+      "gamma": 1.0,
+      "unknown_codes": 2,
+      "targets_unwritten": 0,
+      "design": {
+        "n": 12,
+        "variants": 6,
+        "seeds_per_variant": 2,
+        "seeds": [
+          20261001,
+          20261002
+        ]
+      },
+      "arm": "varied",
+      "series": "lapse"
+    },
+    {
+      "name": "t2_d3",
+      "file": "t2_d3.json",
+      "t": 2,
+      "d": 3,
+      "V": 4,
+      "H": 1,
+      "log2H": 0.0,
+      "gamma": 1.0,
+      "unknown_codes": 1,
+      "targets_unwritten": 0,
+      "design": {
+        "n": 12,
+        "variants": 4,
+        "seeds_per_variant": 3,
+        "seeds": [
+          20261001,
+          20261002,
+          20261003
+        ]
+      },
+      "arm": "varied",
+      "series": "lapse"
+    },
+    {
+      "name": "t2_d4",
+      "file": "t2_d4.json",
+      "t": 2,
+      "d": 4,
+      "V": 1,
+      "H": 1,
+      "log2H": 0.0,
+      "gamma": 1.0,
+      "unknown_codes": 0,
+      "targets_unwritten": 0,
+      "design": {
+        "n": 12,
+        "variants": 1,
+        "seeds_per_variant": 12,
+        "seeds": [
+          20261001,
+          20261002,
+          20261003,
+          20261004,
+          20261005,
+          20261006,
+          20261007,
+          20261008,
+          20261009,
+          20261010,
+          20261011,
+          20261012
+        ]
+      },
+      "arm": "varied",
+      "series": "lapse"
+    }
+  ]
+}
