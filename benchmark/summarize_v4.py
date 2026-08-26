@@ -102,8 +102,10 @@ def entropy(counts):
 def describe(rows, truth, gamma):
     """1セルぶんの読み取り量。**二部モデル**（仕様 第7節）。
 
-    棄権率は独立の指標として出し、山の統計は**非棄権の数値回答**で計算する。
-    棄権込みの値は感度分析として併記する。総トークンは従来どおり全標本。
+    棄権率は独立の指標として出し、山の統計は**非棄権の数値回答**で計算する
+    （分母は「非棄権かつ数値が取れた」件数）。棄権込みの値は感度分析として併記し、
+    そちらの分母も実際に数値が取れた件数に揃える。
+    **棄権率の分母と総トークンは全標本のまま。**
     """
     for r in rows:
         flag, hits = abstention(r.get("final_answer"))
@@ -116,7 +118,12 @@ def describe(rows, truth, gamma):
     groups = cluster(values)
     sizes = [len(g) for g in groups]
     n = len(rows)
-    m = len(kept)          # 山の統計の分母は非棄権
+    # **山の統計の分母は「非棄権かつ数値が取れた」件数。** values はもともと
+    # 数値回答だけなので、分母を非棄権全件にすると、数値を取り出せなかった標本の
+    # ぶんだけ占有率が下振れする。取り出せなかった件数は黙って消さず、
+    # 独立の項目として出す。
+    m = len(answered)
+    unparsed = len(kept) - len(answered)
     correct_group = None
     for g in groups:
         if any(abs(v - truth) < 1e-9 for v in g):
@@ -128,6 +135,8 @@ def describe(rows, truth, gamma):
     all_groups = cluster(all_values)
     all_correct = next((g for g in all_groups
                         if any(abs(v - truth) < 1e-9 for v in g)), None)
+    # 感度側も同じ原則。分母は実際に数値が取れた件数。
+    ma = len(all_values)
     # 「対応がデータに無いので該当0」と述べて 0 を答える型。誤答とは性質が違うので
     # 数え分ける。**山推定には手を入れない**（0 も1つの値として山に入る）。
     zeros = sum(1 for v in values if v == 0)
@@ -135,10 +144,12 @@ def describe(rows, truth, gamma):
         "棄権数": len(abstained),
         "棄権率": (len(abstained) / n) if n else 0.0,
         "非棄権数": len(kept),
+        "非棄権だが数値抽出不能": unparsed,
         "感度_棄権込み": {
             "山の数": len(all_groups),
-            "最大山の占有率": (max((len(g) for g in all_groups), default=0) / n) if n else 0.0,
-            "正解山の占有率": (len(all_correct) / n) if all_correct and n else 0.0,
+            "数値が取れた": ma,
+            "最大山の占有率": (max((len(g) for g in all_groups), default=0) / ma) if ma else 0.0,
+            "正解山の占有率": (len(all_correct) / ma) if all_correct and ma else 0.0,
             "回答エントロピー": entropy(list(Counter(all_values).values())),
         },
         "0回答数": zeros,
@@ -194,8 +205,8 @@ def main():
     print(f"seed 群 {sorted({r.get('seed') for r in run['results']})}")
     print()
     header = (f"{'条件':10s} {'V':>3s} {'log2H':>6s} {'n':>4s} {'棄権率':>7s} "
-              f"{'山':>3s} {'最大山':>7s} {'正解山':>7s} {'γ':>7s} "
-              f"{'エントロピー':>12s} {'総token':>9s}")
+              f"{'不能':>4s} {'分母':>4s} {'山':>3s} {'最大山':>7s} {'正解山':>7s} "
+              f"{'γ':>7s} {'エントロピー':>12s} {'総token':>9s}")
     print(header)
     print("-" * len(header))
     out = {}
@@ -207,7 +218,8 @@ def main():
         lg = meta.get("log2H")
         print(f"{name:10s} {meta.get('V', 0):>3d} "
               f"{(lg if lg is not None else float('nan')):>6.2f} "
-              f"{d['標本数']:>4d} {d['棄権率']:>7.2f} {d['山の数']:>3d} "
+              f"{d['標本数']:>4d} {d['棄権率']:>7.2f} "
+              f"{d['非棄権だが数値抽出不能']:>4d} {d['数値が取れた']:>4d} {d['山の数']:>3d} "
               f"{d['最大山の占有率']:>7.2f} {d['正解山の占有率']:>7.2f} "
               f"{(g if g is not None else float('nan')):>7.3f} "
               f"{d['回答エントロピー']:>12.3f} {d['総トークン']:>9,}")

@@ -1470,6 +1470,40 @@ def _():
     assert d["感度_棄権込み"]["正解山の占有率"] == 0.5
 
 
+@check("計器v2.0: 山統計の分母は非棄権かつ数値が取れた件数")
+def _():
+    import importlib.util
+    root = pathlib.Path(__file__).resolve().parent
+    spec = importlib.util.spec_from_file_location("sv4", root / "summarize_v4.py")
+    sv4 = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(sv4)
+    # 4標本: 正解1 / 誤答1 / 棄権1 / **非棄権だが数値が取り出せない1**
+    rows = [
+        {"final_number": 228, "final_answer": "228", "total_tokens": 1},
+        {"final_number": 186, "final_answer": "186", "total_tokens": 1},
+        {"final_number": 0, "final_answer": "定義が含まれていないため特定できません",
+         "total_tokens": 1},
+        {"final_number": None, "final_answer": "数値のない文章だけの回答",
+         "total_tokens": 1},
+    ]
+    d = sv4.describe(rows, 228, 1 / 6)
+    assert d["標本数"] == 4
+    assert d["棄権数"] == 1                       # 棄権率の分母は全標本
+    assert d["棄権率"] == 0.25
+    assert d["非棄権数"] == 3
+    # **黙って分母から消さない。** 取り出せなかった件数は独立に出す。
+    assert d["非棄権だが数値抽出不能"] == 1
+    assert d["数値が取れた"] == 2
+    # 占有率の分母は 2（非棄権かつ数値が取れた）であって 3 ではない
+    assert d["正解山の占有率"] == 0.5, d["正解山の占有率"]
+    assert d["最大山の占有率"] == 0.5
+    # 感度側の分母も、実際に数値が取れた件数（棄権の0を含めて3）
+    assert d["感度_棄権込み"]["数値が取れた"] == 3
+    assert abs(d["感度_棄権込み"]["正解山の占有率"] - 1 / 3) < 1e-12
+    # 総トークンは全標本
+    assert d["総トークン"] == 4
+
+
 def main():
     rb.configure_stdout()
     failed = 0
