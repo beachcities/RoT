@@ -24,6 +24,43 @@ import sys
 from collections import Counter
 
 
+# 棄権（abstention）の判定規則。仕様 第7節。
+#
+# **数値0の機械的判定ではない。** 0 が正当な数値解になり得る課題への拡張に備え、
+# 「対応が無い」と「だから出せない」を**両方**述べていることを要件とする。
+# 強い言い切り（下の STRONG）は単独で棄権とみなす。
+#
+# 判定にかけるのは最終回答の本文のみ（思考テキストは見ない）。
+ABSTAIN_STRONG = [
+    "特定できません", "特定することができません", "特定できない",
+    "回答できません", "答えられません",
+    "該当する企業は存在しません", "該当する企業はありません", "該当なし",
+]
+ABSTAIN_ABSENT = [           # 対応・定義が無いこと
+    "定義されていない", "定義がありません", "定義はありません", "定義が含まれ",
+    "含まれていません", "提供されていません", "提供されていない",
+    "記載されていません", "記載がありません", "マッピング", "対応関係",
+    "不明", "判別できません",
+]
+ABSTAIN_UNABLE = [           # だから出せないこと
+    "できません", "できない", "判断できません", "0 となります", "0となります",
+    "0 です", "0です", "存在しません", "ありません",
+]
+
+
+def abstention(text):
+    """棄権かどうかと、当たった語を返す。**当たった語も記録する**（監査のため）。"""
+    t = text or ""
+    strong = [w for w in ABSTAIN_STRONG if w in t]
+    if strong:
+        return True, strong
+    absent = [w for w in ABSTAIN_ABSENT if w in t]
+    unable = [w for w in ABSTAIN_UNABLE if w in t]
+    if absent and unable:
+        return True, absent[:2] + unable[:2]
+    return False, []
+
+
 def cluster(values, rel_gap=0.05):
     """数直線に並べ、隣との隔たりが広いところで切る。
 
@@ -63,28 +100,53 @@ def entropy(counts):
 
 
 def describe(rows, truth, gamma):
-    """1セルぶんの読み取り量。"""
-    answered = [r for r in rows if r.get("final_number") is not None]
+    """1セルぶんの読み取り量。**二部モデル**（仕様 第7節）。
+
+    棄権率は独立の指標として出し、山の統計は**非棄権の数値回答**で計算する。
+    棄権込みの値は感度分析として併記する。総トークンは従来どおり全標本。
+    """
+    for r in rows:
+        flag, hits = abstention(r.get("final_answer"))
+        r["棄権"] = flag
+        r["棄権の根拠"] = hits
+    abstained = [r for r in rows if r["棄権"]]
+    kept = [r for r in rows if not r["棄権"]]
+    answered = [r for r in kept if r.get("final_number") is not None]
     values = [r["final_number"] for r in answered]
     groups = cluster(values)
     sizes = [len(g) for g in groups]
     n = len(rows)
+    m = len(kept)          # 山の統計の分母は非棄権
     correct_group = None
     for g in groups:
         if any(abs(v - truth) < 1e-9 for v in g):
             correct_group = g
             break
     counts = list(Counter(values).values())
+    # 感度分析: 棄権を混ぜたまま同じ計算をするとどうなるか
+    all_values = [r["final_number"] for r in rows if r.get("final_number") is not None]
+    all_groups = cluster(all_values)
+    all_correct = next((g for g in all_groups
+                        if any(abs(v - truth) < 1e-9 for v in g)), None)
     # 「対応がデータに無いので該当0」と述べて 0 を答える型。誤答とは性質が違うので
     # 数え分ける。**山推定には手を入れない**（0 も1つの値として山に入る）。
     zeros = sum(1 for v in values if v == 0)
     return {
+        "棄権数": len(abstained),
+        "棄権率": (len(abstained) / n) if n else 0.0,
+        "非棄権数": len(kept),
+        "感度_棄権込み": {
+            "山の数": len(all_groups),
+            "最大山の占有率": (max((len(g) for g in all_groups), default=0) / n) if n else 0.0,
+            "正解山の占有率": (len(all_correct) / n) if all_correct and n else 0.0,
+            "回答エントロピー": entropy(list(Counter(all_values).values())),
+        },
         "0回答数": zeros,
         "標本数": n,
         "数値が取れた": len(answered),
         "山の数": len(groups),
-        "最大山の占有率": (max(sizes) / n) if sizes and n else 0.0,
-        "正解山の占有率": (len(correct_group) / n) if correct_group and n else 0.0,
+        "最大山の占有率": (max(sizes) / m) if sizes and m else 0.0,
+        "正解山の占有率": (len(correct_group) / m) if correct_group and m else 0.0,
         "回答エントロピー": entropy(counts),
         "gamma": gamma,
         "総トークン": sum(r.get("total_tokens") or 0 for r in rows),
@@ -131,8 +193,9 @@ def main():
     print(f"inputs 指紋 {run['fingerprint']['inputs']}")
     print(f"seed 群 {sorted({r.get('seed') for r in run['results']})}")
     print()
-    header = (f"{'条件':18s} {'n':>3s} {'山':>3s} {'最大山':>7s} {'正解山':>7s} "
-              f"{'γ':>7s} {'エントロピー':>12s} {'0回答':>5s} {'総token':>9s}")
+    header = (f"{'条件':10s} {'V':>3s} {'log2H':>6s} {'n':>4s} {'棄権率':>7s} "
+              f"{'山':>3s} {'最大山':>7s} {'正解山':>7s} {'γ':>7s} "
+              f"{'エントロピー':>12s} {'総token':>9s}")
     print(header)
     print("-" * len(header))
     out = {}
@@ -140,10 +203,14 @@ def main():
         g = spec.get(name, {}).get("gamma")
         d = describe(by[name], truth, g)
         out[name] = d
-        print(f"{name:18s} {d['標本数']:>3d} {d['山の数']:>3d} "
+        meta = spec.get(name, {})
+        lg = meta.get("log2H")
+        print(f"{name:10s} {meta.get('V', 0):>3d} "
+              f"{(lg if lg is not None else float('nan')):>6.2f} "
+              f"{d['標本数']:>4d} {d['棄権率']:>7.2f} {d['山の数']:>3d} "
               f"{d['最大山の占有率']:>7.2f} {d['正解山の占有率']:>7.2f} "
               f"{(g if g is not None else float('nan')):>7.3f} "
-              f"{d['回答エントロピー']:>12.3f} {d['0回答数']:>5d} {d['総トークン']:>9,}")
+              f"{d['回答エントロピー']:>12.3f} {d['総トークン']:>9,}")
     print()
     for name in sorted(by):
         print(f"{name} の山:")
@@ -151,6 +218,19 @@ def main():
             mark = "  ← 正解" if m["正解か"] else ""
             print(f"    {m['代表値']:>12} × {m['件数']}{mark}")
     print()
+    print("棄権（仕様 第7節）に当たった標本:")
+    any_hit = False
+    for name in sorted(by):
+        for r in by[name]:
+            if r.get("棄権"):
+                any_hit = True
+                print(f"    {name} 反復{r['repeat']} 変種{r.get('variant')} "
+                      f"seed{r.get('seed')} 根拠={r.get('棄権の根拠')}")
+    if not any_hit:
+        print("    なし")
+    print()
+    print("山の統計の分母は**非棄権**。棄権込みは感度分析として各セルの")
+    print("「感度_棄権込み」に入れてある。総トークンは全標本。")
     print("**n が小さいので検定はしない。** 正解山の占有率と γ を並べて置くだけにする。")
     print("山の数は隙間で切った素朴な推定で、想定山数は使っていない。")
     return out

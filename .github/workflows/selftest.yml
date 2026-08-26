@@ -1,0 +1,38 @@
+# GPU を要らない検査だけを、毎コミット回す。
+#
+# 計器v2 の preflight は「当該 SHA で Actions が green であること」を証跡に要求する
+# （仕様 第8節⑤）。**その証跡をここで作る。**
+#
+# 実 API も GPU も使わない。selftest はモックのクライアントで完結する。
+name: selftest
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  selftest:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: benchmark
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 依存を入れる
+        # selftest が触る範囲だけ。torch も vllm も要らない。
+        run: pip install --quiet openai python-dotenv
+
+      - name: 組を作り直して差分が出ないことを確かめる
+        # 生成器と、リポジトリに置いてある組がずれていたら止める。
+        run: |
+          python suites/build_v4.py
+          git diff --exit-code -- suites/v4_distribution
+
+      - name: selftest
+        run: python selftest.py

@@ -489,7 +489,7 @@ def unsupported_param(exc, kwargs):
     return None
 
 
-def create_completion(client, model, messages, sampling, repeat=1):
+def create_completion(client, model, messages, sampling, repeat=1, seed=None):
     """sampling を付けて投げる。拒まれたものは落として記録し、投げ直す。
 
     thinking を切る指定は落とさない。**落として黙って続けると、考えさせない
@@ -502,7 +502,7 @@ def create_completion(client, model, messages, sampling, repeat=1):
             # seed はモデルごとの共有状態ではなく、反復ごとに決まる。
             # サーバに拒まれて落とされていれば "used" に無いので、当てない。
             if "seed" in kwargs:
-                kwargs["seed"] = seed_for_repeat(repeat)
+                kwargs["seed"] = seed_for_repeat(repeat) if seed is None else seed
             if extra:
                 kwargs["extra_body"] = extra
             return client.chat.completions.create(model=model, messages=messages, **kwargs)
@@ -584,6 +584,24 @@ def response_meta(response):
     }
 
 
+def resolve_sample(design, repeat):
+    """完全交差・均衡設計での (変種, seed)。仕様 第3節。
+
+    標本 i = repeat − 1 に対し
+
+        変種 = i // k          seed = seeds[i % k]        （k = 変種あたりの seed 数）
+
+    **同一セル内では同じ seed 集合を全変種に交差させる。** 変種ごとに別の seed を
+    振ると、変種効果と seed 効果がふたたび交絡する。設計を持たない条件では
+    (None, None) を返し、呼び出し側が従来の規則に落ちる。
+    """
+    if not design:
+        return None, None
+    k = design["seeds_per_variant"]
+    i = repeat - 1
+    return i // k, design["seeds"][i % k]
+
+
 def pick_variant(data, repeat):
     """条件が変種を持つなら、反復番号で1つ選ぶ。持たなければそのまま返す。
 
@@ -599,7 +617,7 @@ def pick_variant(data, repeat):
 
 
 def run_task(client, model, condition, data, task, max_attempts=None, repeat=1, prompts=None,
-             sampling=None):
+             sampling=None, variant=None, seed=None):
     """1タスクを1条件で1回走らせる。正答するか試行を使い切るまで繰り返す。
 
     ここでいう「試行（attempt）」は同じ会話の中でのリトライ。反復（repeat）は
@@ -609,7 +627,13 @@ def run_task(client, model, condition, data, task, max_attempts=None, repeat=1, 
     prompts = load_prompts(PROMPT_SET) if prompts is None else prompts
     if sampling is None:
         sampling = {"requested": sampling_params(), "used": sampling_params(), "dropped": {}}
-    payload, variant = pick_variant(data, repeat)
+    # 設計が変種と seed を決めているならそれに従う。無ければ従来の規則。
+    if variant is None:
+        payload, variant = pick_variant(data, repeat)
+    else:
+        payload = data["variants"][variant % len(data["variants"])]
+    if seed is None:
+        seed = seed_for_repeat(repeat)
     messages = [
         {
             "role": "user",
@@ -635,7 +659,7 @@ def run_task(client, model, condition, data, task, max_attempts=None, repeat=1, 
 
     for attempt_no in range(1, max_attempts + 1):
         try:
-            response = create_completion(client, model, messages, sampling, repeat)
+            response = create_completion(client, model, messages, sampling, repeat, seed)
         except Exception as exc:  # 何が飛んでも、そこまでに消費したトークンは残す
             status = "error"
             error = f"{type(exc).__name__}: {exc}"
@@ -717,7 +741,7 @@ def run_task(client, model, condition, data, task, max_attempts=None, repeat=1, 
         "variant": variant,
         # この反復で実際に送った seed。サーバに拒まれて落ちていれば null。
         # 規則は fingerprint.settings.seed_rule にある。
-        "seed": seed_for_repeat(repeat) if "seed" in sampling["used"] else None,
+        "seed": seed if "seed" in sampling["used"] else None,
         "status": status,
         # 最後の応答の素性。実体名が途中で変わった場合は attempt_log を見る。
         "response_model": attempts[-1].get("response_model") if attempts else None,
@@ -865,10 +889,16 @@ def main():
             )
         tasks = [t for t in tasks if t["task_id"] in wanted]
 
+    # 標本設計を持つ組では、セルごとに標本数が違う。総数はその和になる。
+    designs = {c["name"]: c.get("design") for c in condition_spec}
+    per_cell = [designs.get(name)["n"] if designs.get(name) else repeats
+                for name in conditions]
+    planned = len(models) * len(tasks) * sum(per_cell)
     cells = len(models) * len(conditions) * len(tasks)
     print(
         f"組 {suite} / プロンプト {prompt_set} / thinking {THINKING}: "
-        f"{cells} セル x 反復 {repeats} 回 = {cells * repeats} 回の実行"
+        f"{cells} セル / 計 {planned} 標本"
+        + ("" if len(set(per_cell)) == 1 else "（セルごとに標本数が違う）")
     )
 
     # 結果ファイルだけを見て、どの入力で出たものか分かるようにする。
@@ -927,22 +957,29 @@ def main():
         m: {"requested": sampling_params(), "used": sampling_params(), "dropped": {}}
         for m in models
     }
+    # セルが標本設計を持つなら、標本数も変種も seed もそこから決まる（計器v2）。
+    # 持たない組では従来どおり、全セル共通の反復数と seed 規則を使う。
+    spec_by_name = {c["name"]: c for c in condition_spec}
     for model in models:
         for condition, data in conditions.items():
+            design = (spec_by_name.get(condition) or {}).get("design")
+            cell_repeats = design["n"] if design else repeats
             for task in tasks:
-                for repeat in range(1, repeats + 1):
+                for repeat in range(1, cell_repeats + 1):
                     key = (model, condition, task["task_id"], repeat)
                     if key in by_key:
                         results.append(by_key[key])
                         reused += 1
                         continue
+                    variant, seed = resolve_sample(design, repeat)
                     print(
                         f"running: {model} / {condition} / {task['task_id']}"
-                        f" [{repeat}/{repeats}]"
+                        f" [{repeat}/{cell_repeats}]"
+                        + (f" 変種{variant} seed{seed}" if design else "")
                     )
                     result = run_task(
                         client, model, condition, data, task, max_attempts, repeat, prompts,
-                        sampling_by_model[model],
+                        sampling_by_model[model], variant=variant, seed=seed,
                     )
                     if result["status"] == "error":
                         print(f"  error: {result['error']}")

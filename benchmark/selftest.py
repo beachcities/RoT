@@ -1373,7 +1373,8 @@ def _():
     run = {"run_at": "T", "models": ["m"], "thinking_mode": "on", "max_attempts": 1,
            "repeats": 2, "fingerprint": {"inputs": "abc"},
            "inputs": {"tasks": [{"ground_truth": "228"}]},
-           "condition_spec": [{"name": "c", "t": 0, "d": 2, "arm": "varied", "gamma": 1 / 6}],
+           "condition_spec": [{"name": "c", "t": 0, "d": 2, "arm": "varied", "gamma": 1 / 6,
+                               "V": 6, "H": 6, "log2H": 2.585, "series": "threshold"}],
            "results": [{"condition": "c", "status": "ok", "final_answer": "228",
                         "total_tokens": 10, "repeat": 1},
                        {"condition": "c", "status": "ok", "final_answer": "0",
@@ -1385,6 +1386,88 @@ def _():
     # 壊れ方の型のラベルは付けない（帰属判断を混ぜない）
     for word in ("散る", "割れる", "ずれる"):
         assert word not in page, word
+
+
+@check("計器v2.0: V・H・γ が凍結仕様の表と全セル一致する")
+def _():
+    import importlib.util
+    root = pathlib.Path(__file__).resolve().parent
+    spec = importlib.util.spec_from_file_location("b4", root / "suites" / "build_v4.py")
+    b4 = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(b4)
+    # 仕様 第3節の V 表
+    assert [b4.variant_count(0, d) for d in range(5)] == [1, 4, 6, 4, 1]
+    assert [b4.variant_count(1, d) for d in range(5)] == [2, 8, 12, 8, 2]
+    assert [b4.variant_count(2, d) for d in range(5)] == [1, 4, 6, 4, 1]
+    # 仕様 第4節の H 表と γ=1/H
+    assert [b4.hypotheses(0, d) for d in range(5)] == [15, 10, 6, 3, 1]
+    assert [b4.hypotheses(1, d) for d in range(5)] == [5, 4, 3, 2, 1]
+    assert [b4.hypotheses(2, d) for d in range(5)] == [1, 1, 1, 1, 1]
+    for t in (0, 1, 2):
+        for d in range(5):
+            assert abs(b4.gamma(t, d) - 1 / b4.hypotheses(t, d)) < 1e-12, (t, d)
+
+
+@check("計器v2.0: 標本設計が完全交差・均衡で、合計200になる")
+def _():
+    import importlib.util
+    root = pathlib.Path(__file__).resolve().parent
+    spec = importlib.util.spec_from_file_location("b4", root / "suites" / "build_v4.py")
+    b4 = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(b4)
+    total = 0
+    for t in (0, 1, 2):
+        for d in range(5):
+            design = b4.design_for(t, d)
+            v = b4.variant_count(t, d)
+            # n = V × k、k は最低2、seed は master の先頭から
+            assert design["n"] == v * design["seeds_per_variant"], (t, d)
+            assert design["seeds_per_variant"] >= 2, (t, d)
+            assert design["seeds"] == b4.MASTER_SEEDS[:design["seeds_per_variant"]], (t, d)
+            total += design["n"]
+    assert total == 200, total
+    # 入れ子: 全セルが S1・S2 を共有する
+    for t in (0, 1, 2):
+        for d in range(5):
+            assert b4.MASTER_SEEDS[:2] == b4.design_for(t, d)["seeds"][:2]
+    # master 帯はスモーク（20260820〜20260829）と重ねない
+    assert min(b4.MASTER_SEEDS) > 20260829, b4.MASTER_SEEDS
+
+
+@check("計器v2.0: 同一セル内で同じ seed 集合が全変種に交差する")
+def _():
+    # 変種 = i // k、seed = seeds[i % k]。**変種ごとに別 seed を振らない。**
+    design = {"n": 12, "variants": 6, "seeds_per_variant": 2, "seeds": [901, 902]}
+    pairs = [rb.resolve_sample(design, r) for r in range(1, 13)]
+    assert pairs[:4] == [(0, 901), (0, 902), (1, 901), (1, 902)], pairs[:4]
+    # 全変種がすべての seed と1回ずつ当たる（完全交差）
+    from collections import Counter
+    assert Counter(pairs) == Counter({(v, s): 1 for v in range(6) for s in (901, 902)})
+    # 設計が無ければ従来の規則に落ちる
+    assert rb.resolve_sample(None, 3) == (None, None)
+
+
+@check("計器v2.0: 棄権は理由の明示で判定し、数値0の機械判定ではない")
+def _():
+    import importlib.util
+    root = pathlib.Path(__file__).resolve().parent
+    spec = importlib.util.spec_from_file_location("sv4", root / "summarize_v4.py")
+    sv4 = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(sv4)
+    # 理由を述べて出せないと言えば棄権
+    assert sv4.abstention("定義が含まれていないため特定できません。0")[0]
+    assert sv4.abstention("マッピングが記載されていないので該当はありません")[0]
+    # **0 と答えただけでは棄権にしない**（0 が正当な解になる課題への拡張に備える）
+    assert not sv4.abstention("合計は 0 人です。")[0]
+    assert not sv4.abstention("228")[0]
+    # 山の統計は非棄権が分母
+    rows = [{"final_number": 228, "final_answer": "228", "total_tokens": 1},
+            {"final_number": 0, "final_answer": "定義が含まれていないため特定できません",
+             "total_tokens": 1}]
+    d = sv4.describe(rows, 228, 1 / 6)
+    assert d["棄権数"] == 1 and d["非棄権数"] == 1
+    assert d["正解山の占有率"] == 1.0            # 非棄権1件のうち1件が正解
+    assert d["感度_棄権込み"]["正解山の占有率"] == 0.5
 
 
 def main():

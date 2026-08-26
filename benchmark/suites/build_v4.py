@@ -1,39 +1,55 @@
 # -*- coding: utf-8 -*-
 """計器v2「分布プローブ」の組を作る（v4_distribution）。
 
-仕様の正本は `paper/notes/instrument-v2-distribution-probe.md`。ここはその実装で、
-**v3 とは実装非互換**（再試行ループを廃し、一発勝負で n 標本を引く）。v3 の数値とは
-直接比較しない。
+仕様の正本は `paper/notes/instrument-v2-distribution-probe.md` の **v2.0凍結版**。
+ここはその実装で、**v3 とは実装非互換**（再試行ループを廃し、一発勝負で n 標本を引く）。
+v3 の数値とは直接比較しない。
 
-## 格子
-
-軸は二本。単一の軸に潰すと、的を書く（直接情報）と外れを書く（消去法が復活する
-間接情報）が交絡する。
+## 格子（仕様 第3節）
 
     的の記載数 t ∈ {0, 1, 2} × 外れの記載数 d ∈ {0, 1, 2, 3, 4}
 
-不透明コードは6つ（303/404/505/606/707/808）で、これはデータが既に持つ数であって
-選定パラメータではない。的は 707・505 の2つ、外れは残り4つ。
+不透明コードは6つ（303/404/505/606/707/808）。的は 707・505 の2つ、外れは残り4つ。
+**文書に書くのは、選ばれた不透明コードの意味だけ。** 101/201/202 は社名から推せるので
+定義を置かない（置くと「書いた／書かない」の意味が二重になる）。
 
-**文書に書くのは、選ばれた不透明コードの意味だけ。** 101/201/202 は社名から
-推せるので定義を置かない（置くと「書いた／書かない」の意味が二重になる）。
+## 変種（仕様 第3節）
 
-## ヌルモデル
+変種は**的の選び方×外れの選び方の直積**で、変種数は
 
-残る不明コードは u = 6 − t − d。その中に未記載の的が 2 − t 個ある。無情報の
-当て推量が残候補から一様に選ぶときの正答率は
+    V = C(2, t) · C(4, d)
 
-    t=2 なら γ=1（的が全部書いてある）
-    それ以外は γ = 1 / C(u, 2−t)、ただし u < 2−t なら的に届かないので γ=0
+    t=0行: 1, 4, 6, 4, 1
+    t=1行: 2, 8, 12, 8, 2
+    t=2行: 1, 4, 6, 4, 1
 
-例: t=0,d=0 → C(6,2)=15 で 1/15。t=0,d=2 → C(4,2)=6 で 1/6。
-    t=0,d=4 → C(2,2)=1 で 1。t=1,d=3 → C(2,1)=2 で 1/2。
+## 残存仮説数と偶然水準（仕様 第4節）
 
-## 部分集合の振り方
+    H = C(6 − t − d, 2 − t)      γ = 1 / H
 
-外れ4つのうちどの d 個を書くかは一通りではない。固定すると特定の残候補集合の癖を
-測ることになるので、**標本間で振る側を既定とする**。実装としては、セルに変種
-（variants）を並べ、ランナーが反復番号で順に選ぶ。固定側は変種を1つだけ持つ。
+    t=0断面: H = 15, 10, 6, 3, 1
+    t=1断面: H =  5,  4, 3, 2, 1
+    t=2断面: H =  1（全 d、γ=1）
+
+**H は「どれを」書いたかに依らず「いくつ」書いたかで決まる**ので、変種間で共通。
+集計の横軸は d ではなく **x = log2 H**（外れ1個の追加は等量の情報増加ではなく、
+H の縮み方は組合せで決まる）。
+
+## 標本設計（仕様 第3節・完全交差・均衡）
+
+**同一セル内では、同じ seed 集合を全変種に交差させる。** 変種ごとに別の seed を
+振ると、変種効果と seed 効果がふたたび交絡する。
+
+    n = V × k        k = 変種あたりの seed 数（最低2）
+
+seed は**入れ子の master 集合**から先頭順に取る。全セルが少なくとも S1・S2 を
+共有するので、d 方向・t 方向の比較が paired に近い構造を持つ。
+
+    V=1  → k=12 → S1〜S12        V=6  → k=2  → S1〜S2
+    V=2  → k=6  → S1〜S6         V=8  → k=2  → S1〜S2
+    V=4  → k=3  → S1〜S3         V=12 → k=2  → S1〜S2
+
+**master 帯はスモーク（20260820〜20260829）と重ねない。**
 """
 
 import argparse
@@ -50,44 +66,71 @@ SOURCE = HERE / "v3_levels" / "l6_codes_doc.json"
 
 TARGETS = ["707", "505"]                       # 的（専門サービス業・学術研究業）
 DECOYS = ["303", "404", "606", "808"]          # 外れ（社名から推せない残り4つ）
-TRANSPARENT = ["101", "201", "202"]            # 社名から推せる。定義は置かない
+
+# 走行ごとに事前登録する master seed 集合。**スモーク帯と重ねない。**
+MASTER_SEEDS = [20260901 + i for i in range(12)]      # S1 … S12
+
+# セル別の標本数（仕様 第3節「パイロットの最小設計」）。合計200。
+N_TABLE = {
+    0: [12, 12, 12, 12, 12],
+    1: [12, 16, 24, 16, 12],
+    2: [12, 12, 12, 12, 12],
+}
 
 QUERY = ("専門サービス業と学術研究業に属する企業について、"
          "従業員数の合計は何人ですか。数値のみを答えてください。")
 GROUND_TRUTH = "228"
 
 
-def gamma(t, d):
-    """そのセルの偶然水準。**測った分布はこれと突き合わせる。**"""
-    if t == 2:
-        return 1.0
+def variant_count(t, d):
+    """V = C(2,t)·C(4,d)。的の選び方 × 外れの選び方の直積。"""
+    return math.comb(2, t) * math.comb(4, d)
+
+
+def hypotheses(t, d):
+    """残存仮説数 H = C(6−t−d, 2−t)。的が全部書いてあれば 1。"""
     u = 6 - t - d
     need = 2 - t
+    if need == 0:
+        return 1
     if u < need:
-        return 0.0
-    return 1.0 / math.comb(u, need)
+        return 0
+    return math.comb(u, need)
+
+
+def gamma(t, d):
+    """偶然水準 γ = 1/H。**測った分布はこれと突き合わせる。**"""
+    h = hypotheses(t, d)
+    return 1.0 / h if h else 0.0
 
 
 def document(defs, source):
-    """選ばれたコードの意味だけを載せた文書を作る。"""
-    data = {"records": source["records"]}
-    if defs:
-        data = {"code_definition": {c: source["code_definition"][c] for c in defs},
-                "records": source["records"]}
-    return data
+    """選ばれたコードの意味だけを載せた文書。"""
+    if not defs:
+        return {"records": source["records"]}
+    return {"code_definition": {c: source["code_definition"][c] for c in defs},
+            "records": source["records"]}
 
 
 def variants_for(t, d):
-    """(t, d) セルの変種を、的の選び方 × 外れの選び方で並べる。
+    """(t, d) の変種を、的の選び方 × 外れの選び方で並べる（決定的な順）。"""
+    return [list(ts) + list(ds)
+            for ts in itertools.combinations(TARGETS, t)
+            for ds in itertools.combinations(DECOYS, d)]
 
-    並びは決定的（itertools の順）。**ランナーは反復番号で選ぶので、
-    どの標本がどの部分集合を見たかは seed と反復番号から再現できる。**
-    """
-    out = []
-    for tsel in itertools.combinations(TARGETS, t):
-        for dsel in itertools.combinations(DECOYS, d):
-            out.append(list(tsel) + list(dsel))
-    return out
+
+def design_for(t, d):
+    """完全交差・均衡の標本設計。**均衡が取れない n は採らない。**"""
+    v = variant_count(t, d)
+    n = N_TABLE[t][d]
+    if n % v:
+        raise SystemExit(f"t={t} d={d}: n={n} が V={v} で割り切れない（均衡が取れない）")
+    k = n // v
+    if k < 2:
+        raise SystemExit(f"t={t} d={d}: 変種あたり {k} seed では最低2に足りない")
+    if k > len(MASTER_SEEDS):
+        raise SystemExit(f"t={t} d={d}: master seed が {k} 本に足りない")
+    return {"n": n, "variants": v, "seeds_per_variant": k, "seeds": MASTER_SEEDS[:k]}
 
 
 def main():
@@ -99,32 +142,40 @@ def main():
     source = json.load(open(SOURCE, encoding="utf-8"))
 
     conditions = []
+    total = 0
     for t in (0, 1, 2):
         for d in (0, 1, 2, 3, 4):
             picks = variants_for(t, d)
-            for arm, chosen in (("varied", picks), ("fixed", picks[:1])):
-                name = f"t{t}_d{d}_{arm}"
-                payload = {
-                    "variants": [document(v, source) for v in chosen],
-                    "variant_codes": chosen,
-                }
-                (out / f"{name}.json").write_text(
-                    json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-                conditions.append({
-                    "name": name, "file": f"{name}.json",
-                    "t": t, "d": d, "arm": arm,
-                    # **既定は「振る」で確定。** スモークで固定側は 8/10 が同一の誤答に
-                    # 集中し、変種の癖が壊れ方の指紋を汚すことが実測された
-                    # （run_20260826T030829Z）。固定側は比較のために残すが使わない。
-                    "default": arm == "varied",
-                    "gamma": gamma(t, d),
-                    "unknown_codes": 6 - t - d,
-                    "targets_unwritten": 2 - t,
-                    "variant_count": len(chosen),
-                })
+            assert len(picks) == variant_count(t, d), (t, d)
+            design = design_for(t, d)
+            name = f"t{t}_d{d}"
+            (out / f"{name}.json").write_text(
+                json.dumps({"variants": [document(v, source) for v in picks],
+                            "variant_codes": picks},
+                           ensure_ascii=False, indent=2), encoding="utf-8")
+            h = hypotheses(t, d)
+            conditions.append({
+                "name": name, "file": f"{name}.json",
+                "t": t, "d": d,
+                "V": design["variants"],
+                "H": h,
+                "log2H": math.log2(h) if h else None,
+                "gamma": gamma(t, d),
+                "unknown_codes": 6 - t - d,
+                "targets_unwritten": 2 - t,
+                "design": design,
+                # 外れ部分集合は標本間で振る。スモークで固定側は 8/10 が同一の誤答へ
+                # 集中し、特定変種の癖を測ってしまうことが実測された
+                # （run_20260826T030829Z）。
+                "arm": "varied",
+                # t=2 は m/w 推定の対象外で、十分情報条件の lapse を測る系列。
+                "series": "lapse" if t == 2 else "threshold",
+            })
+            total += design["n"]
 
     (out / "conditions.json").write_text(
-        json.dumps({"conditions": conditions}, ensure_ascii=False, indent=2),
+        json.dumps({"master_seeds": MASTER_SEEDS, "total_samples": total,
+                    "conditions": conditions}, ensure_ascii=False, indent=2),
         encoding="utf-8")
 
     tasks = [{
@@ -143,11 +194,18 @@ def main():
     (out / "tasks.json").write_text(json.dumps(tasks, ensure_ascii=False, indent=2),
                                     encoding="utf-8")
 
-    print(f"書き出した: {out}  条件 {len(conditions)} 件")
+    print(f"書き出した: {out}  条件 {len(conditions)} 件 / 標本 {total}")
+    print(f"master seed: S1..S{len(MASTER_SEEDS)} = "
+          f"{MASTER_SEEDS[0]}..{MASTER_SEEDS[-1]}")
+    print(f"\n{'セル':9s} {'V':>3s} {'H':>3s} {'log2H':>7s} {'γ':>8s} "
+          f"{'n':>4s} {'k':>3s}  seed")
     for c in conditions:
-        if c["arm"] == "varied":
-            print(f"  t={c['t']} d={c['d']} u={c['unknown_codes']} "
-                  f"gamma={c['gamma']:.4f} 変種={c['variant_count']}")
+        dz = c["design"]
+        lg = c["log2H"]
+        print(f"t={c['t']} d={c['d']}   {c['V']:>3d} {c['H']:>3d} "
+              f"{(lg if lg is not None else float('nan')):>7.3f} "
+              f"{c['gamma']:>8.4f} {dz['n']:>4d} {dz['seeds_per_variant']:>3d}  "
+              f"S1..S{dz['seeds_per_variant']}")
 
 
 if __name__ == "__main__":

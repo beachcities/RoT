@@ -57,6 +57,17 @@ def collect(run, rel_gap=0.05):
         d["t"] = meta.get("t")
         d["d"] = meta.get("d")
         d["arm"] = meta.get("arm")
+        d["V"] = meta.get("V")
+        d["H"] = meta.get("H")
+        d["log2H"] = meta.get("log2H")
+        d["series"] = meta.get("series")
+        # 変種内／変種間の揺れ。**完全交差なので分解できる**（仕様 第3節）。
+        per_variant = {}
+        for x in items:
+            per_variant.setdefault(x.get("variant"), []).append(x)
+        d["変種別の正解数"] = {k: sum(1 for y in v if y.get("success"))
+                            for k, v in sorted(per_variant.items(),
+                                               key=lambda kv: (kv[0] is None, kv[0]))}
         d["条件"] = name
         d["判定"] = verdict(d["正解山の占有率"], meta.get("gamma"))
         d["回答"] = sorted(
@@ -97,10 +108,11 @@ def text_grid(cells):
                 row += "  " + "-" * 14
                 continue
             row += (f"  {cell['正解山の占有率']:.2f}{mark[cell['判定']]}"
-                    f"{cell['gamma']:.2f} 山{cell['山の数']:<2d}0×{cell['0回答数']:<2d}")
+                    f"{cell['gamma']:.2f} 山{cell['山の数']:<2d}"
+                    f"棄{cell['棄権率']:.2f}")
         lines.append(row)
     lines.append("")
-    lines.append("  各セル: 正解山占有率 [>|=|<] γ  山の数  0回答数")
+    lines.append("  各セル: 正解山占有率 [>|=|<] γ  山の数  棄権率")
     lines.append("  記号は数値の規則のみ（> は γ 超え、= は ±0.05 以内、< は γ 未満）。")
     return "\n".join(lines)
 
@@ -164,7 +176,11 @@ def render_html(run, cells):
         out.append(f"<th>d={d}</th>")
     out.append("</tr>")
     for t in ts:
-        out.append(f"<tr><th>t={t}</th>")
+        label = f"t={t}"
+        if any(c["t"] == t and c.get("series") == "lapse" for c in cells.values()):
+            # 仕様 第5節: t=2 は m/w 推定の対象外で、十分情報条件の lapse を測る系列。
+            label += "<br><span style='font-weight:400;font-size:10px'>lapse系列<br>"                     "（m/w推定の<br>対象外）</span>"
+        out.append(f"<tr><th>{label}</th>")
         for d in ds:
             cell = cell_at(cells, t, d)
             if cell is None:
@@ -173,8 +189,11 @@ def render_html(run, cells):
             out.append(
                 f"<td class='{cell['判定']}'><span class='cell'>"
                 f"<span class='big'>{cell['正解山の占有率']:.2f} / {cell['gamma']:.2f}</span>"
-                f"<span class='sub'>山 {cell['山の数']}　0回答 {cell['0回答数']}<br>"
-                f"token中央 {cell['トークン中央値']:,.0f}</span>"
+                f"<span class='sub'>山 {cell['山の数']}　棄権 {cell['棄権率']:.0%}<br>"
+                # V・log2H を持たない世代のランでも描けるようにしておく
+                + (f"V={cell['V']}　log2H={cell['log2H']:.2f}<br>"
+                   if cell.get("V") is not None and cell.get("log2H") is not None else "")
+                + f"token中央 {cell['トークン中央値']:,.0f}</span>"
                 "</span></td>")
         out.append("</tr>")
     out.append("</table>")
@@ -201,8 +220,14 @@ def render_html(run, cells):
 測った占有率をこれと突き合わせる。</dd>
 <dt>山の数</dt><dd>回答を数直線に並べ、値の広がりに対して 5% より広い隙間で
 切った数。山の数は先に決めていない。</dd>
-<dt>0回答</dt><dd>「対応がデータに無いので該当は0」と述べて 0 を答えた標本の数。
-誤答とは性質が違うので数え分けている。山推定にはそのまま入っている。</dd>
+<dt>棄権率</dt><dd>「対応がデータに無い」と「だから出せない」を明示した標本の割合。
+<strong>数値0の機械的判定ではない</strong>——0 が正当な解になり得る課題への拡張に
+備え、理由の明示を要件とする。<strong>山の統計は非棄権の数値回答で計算し</strong>、
+棄権込みの値は感度分析として別に持つ。総トークンは全標本。</dd>
+<dt>V</dt><dd>そのセルの変種数 <code>C(2,t)·C(4,d)</code>。同一セル内では同じ seed
+集合を全変種に交差させている。</dd>
+<dt>log2H</dt><dd>残存不確実性（bit）。<code>H = C(6−t−d, 2−t)</code>。
+集計の横軸は d ではなくこれ——外れ1個の追加は等量の情報増加ではないため。</dd>
 <dt>token中央値</dt><dd>そのセルの1標本あたり総トークンの中央値。</dd>
 <dt>色</dt><dd>
 <span class='swatch' style='background:var(--above)'></span>正解山占有率 &gt; γ ／
