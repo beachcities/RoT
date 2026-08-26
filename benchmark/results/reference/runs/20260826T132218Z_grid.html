@@ -1,0 +1,59 @@
+<!doctype html><html lang='ja'><head><meta charset='utf-8'><title>計器v2 格子 20260826T132218Z</title><style>
+:root { --above:#1b7f4b; --above-bg:#e6f4ec; --near:#5b6470; --near-bg:#eef0f2;
+        --below:#a8322b; --below-bg:#fbeceb; --ink:#1a1c1e; --line:#d6d9dd; }
+* { box-sizing: border-box; }
+body { margin:0; padding:32px; background:#fff; color:var(--ink);
+       font-family: "Helvetica Neue", Arial, "Hiragino Sans", "Yu Gothic", sans-serif;
+       line-height:1.6; }
+h1 { font-size:20px; margin:0 0 4px; }
+h2 { font-size:15px; margin:32px 0 10px; border-bottom:1px solid var(--line);
+     padding-bottom:6px; }
+.meta { color:#5b6470; font-size:13px; margin-bottom:24px; }
+.meta code { background:#f4f5f7; padding:1px 5px; border-radius:3px; }
+table { border-collapse:collapse; }
+.grid td, .grid th { border:1px solid var(--line); padding:0; text-align:center; }
+.grid th { background:#f4f5f7; font-size:12px; font-weight:600; padding:6px 10px;
+           color:#5b6470; }
+.cell { display:block; padding:10px 8px; min-width:118px; }
+.cell .big { font-size:19px; font-weight:700; letter-spacing:-0.02em; }
+.cell .sub { font-size:11px; color:#5b6470; margin-top:3px; }
+.above .cell { background:var(--above-bg); } .above .big { color:var(--above); }
+.near  .cell { background:var(--near-bg);  } .near  .big { color:var(--near); }
+.below .cell { background:var(--below-bg); } .below .big { color:var(--below); }
+.answers { font-size:13px; }
+.answers table { width:100%; max-width:560px; margin:4px 0 18px; }
+.answers td { border-bottom:1px solid var(--line); padding:3px 8px; }
+.answers .n { text-align:right; color:#5b6470; width:60px; }
+.answers .correct { font-weight:700; color:var(--above); }
+.legend { font-size:13px; background:#f9fafb; border:1px solid var(--line);
+          border-radius:6px; padding:14px 18px; max-width:760px; }
+.legend dt { font-weight:600; margin-top:8px; }
+.legend dd { margin:0 0 0 16px; color:#3d444d; }
+.swatch { display:inline-block; width:11px; height:11px; border-radius:2px;
+          vertical-align:middle; margin-right:5px; }
+</style></head><body><h1>計器v2 分布プローブ — 格子</h1><p class='meta'>ラン <code>20260826T132218Z</code> ／ モデル <code>Qwen/Qwen3.5-9B</code> ／ thinking on ／ 試行上限 1（1 は一発勝負） ／ 標本 n=1 ／ inputs 指紋 <code>0a975c4b11b702a8</code></p><table class='grid'><tr><th></th><th>d=0</th><th>d=1</th><th>d=2</th><th>d=3</th><th>d=4</th></tr><tr><th>t=0</th><td class='below'><span class='cell'><span class='big'>0.00 / 0.07</span><span class='sub'>山 4　棄権 0%<br>V=1　log2H=3.91<br>token中央 12,514</span></span></td><td class='below'><span class='cell'><span class='big'>0.00 / 0.10</span><span class='sub'>山 3　棄権 33%<br>V=4　log2H=3.32<br>token中央 12,635</span></span></td><td class='below'><span class='cell'><span class='big'>0.00 / 0.17</span><span class='sub'>山 4　棄権 42%<br>V=6　log2H=2.58<br>token中央 12,736</span></span></td><td class='below'><span class='cell'><span class='big'>0.20 / 0.33</span><span class='sub'>山 3　棄権 58%<br>V=4　log2H=1.58<br>token中央 10,982</span></span></td><td class='below'><span class='cell'><span class='big'>0.22 / 1.00</span><span class='sub'>山 3　棄権 25%<br>V=1　log2H=0.00<br>token中央 12,616</span></span></td></tr><tr><th>t=1</th><td class='near'><span class='cell'><span class='big'>0.25 / 0.20</span><span class='sub'>山 6　棄権 33%<br>V=2　log2H=2.32<br>token中央 10,630</span></span></td><td class='below'><span class='cell'><span class='big'>0.09 / 0.25</span><span class='sub'>山 5　棄権 31%<br>V=8　log2H=2.00<br>token中央 10,552</span></span></td><td class='below'><span class='cell'><span class='big'>0.12 / 0.33</span><span class='sub'>山 4　棄権 29%<br>V=12　log2H=1.58<br>token中央 10,408</span></span></td><td class='below'><span class='cell'><span class='big'>0.08 / 0.50</span><span class='sub'>山 3　棄権 19%<br>V=8　log2H=1.00<br>token中央 9,346</span></span></td><td class='below'><span class='cell'><span class='big'>0.00 / 1.00</span><span class='sub'>山 2　棄権 33%<br>V=2　log2H=0.00<br>token中央 9,902</span></span></td></tr><tr><th>t=2<br><span style='font-weight:400;font-size:10px'>lapse系列<br>（m/w推定の<br>対象外）</span></th><td class='near'><span class='cell'><span class='big'>1.00 / 1.00</span><span class='sub'>山 1　棄権 0%<br>V=1　log2H=0.00<br>token中央 4,477</span></span></td><td class='near'><span class='cell'><span class='big'>1.00 / 1.00</span><span class='sub'>山 1　棄権 0%<br>V=4　log2H=0.00<br>token中央 4,447</span></span></td><td class='near'><span class='cell'><span class='big'>1.00 / 1.00</span><span class='sub'>山 1　棄権 0%<br>V=6　log2H=0.00<br>token中央 4,232</span></span></td><td class='near'><span class='cell'><span class='big'>1.00 / 1.00</span><span class='sub'>山 1　棄権 0%<br>V=4　log2H=0.00<br>token中央 4,381</span></span></td><td class='near'><span class='cell'><span class='big'>1.00 / 1.00</span><span class='sub'>山 1　棄権 0%<br>V=1　log2H=0.00<br>token中央 4,158</span></span></td></tr></table><h2>セルごとの回答</h2><div class='answers'><p><strong>t=0 d=0</strong>（t0_d0、γ=0.067、正解 228）</p><table><tr><td>233</td><td class='n'>× 2</td></tr><tr><td>186</td><td class='n'>× 2</td></tr><tr><td>220</td><td class='n'>× 2</td></tr><tr><td>0</td><td class='n'>× 1</td></tr><tr><td>197</td><td class='n'>× 1</td></tr><tr><td>200</td><td class='n'>× 1</td></tr><tr><td>206</td><td class='n'>× 1</td></tr><tr><td>80</td><td class='n'>× 1</td></tr><tr><td>213</td><td class='n'>× 1</td></tr></table><p><strong>t=0 d=1</strong>（t0_d1、γ=0.100、正解 228）</p><table><tr><td>220</td><td class='n'>× 5</td></tr><tr><td>0</td><td class='n'>× 4</td></tr><tr><td>117</td><td class='n'>× 2</td></tr><tr><td>186</td><td class='n'>× 1</td></tr></table><p><strong>t=0 d=2</strong>（t0_d2、γ=0.167、正解 228）</p><table><tr><td>0</td><td class='n'>× 4</td></tr><tr><td>186</td><td class='n'>× 3</td></tr><tr><td>220</td><td class='n'>× 3</td></tr><tr><td>32</td><td class='n'>× 1</td></tr><tr><td>208</td><td class='n'>× 1</td></tr></table><p><strong>t=0 d=3</strong>（t0_d3、γ=0.333、正解 228）</p><table><tr><td>0</td><td class='n'>× 9</td></tr><tr><td>208</td><td class='n'>× 2</td></tr><tr><td class='correct'>228 ← 正解</td><td class='n'>× 1</td></tr></table><p><strong>t=0 d=4</strong>（t0_d4、γ=1.000、正解 228）</p><table><tr><td>0</td><td class='n'>× 7</td></tr><tr><td class='correct'>228 ← 正解</td><td class='n'>× 2</td></tr><tr><td>103</td><td class='n'>× 2</td></tr><tr><td>183</td><td class='n'>× 1</td></tr></table><p><strong>t=1 d=0</strong>（t1_d0、γ=0.200、正解 228）</p><table><tr><td>103</td><td class='n'>× 5</td></tr><tr><td class='correct'>228 ← 正解</td><td class='n'>× 2</td></tr><tr><td>125</td><td class='n'>× 2</td></tr><tr><td>205</td><td class='n'>× 1</td></tr><tr><td>242</td><td class='n'>× 1</td></tr><tr><td>186</td><td class='n'>× 1</td></tr></table><p><strong>t=1 d=1</strong>（t1_d1、γ=0.250、正解 228）</p><table><tr><td>103</td><td class='n'>× 6</td></tr><tr><td>125</td><td class='n'>× 6</td></tr><tr><td class='correct'>228 ← 正解</td><td class='n'>× 1</td></tr><tr><td>242</td><td class='n'>× 1</td></tr><tr><td>186</td><td class='n'>× 1</td></tr><tr><td>220</td><td class='n'>× 1</td></tr></table><p><strong>t=1 d=2</strong>（t1_d2、γ=0.333、正解 228）</p><table><tr><td>103</td><td class='n'>× 12</td></tr><tr><td>125</td><td class='n'>× 8</td></tr><tr><td>242</td><td class='n'>× 2</td></tr><tr><td class='correct'>228 ← 正解</td><td class='n'>× 2</td></tr></table><p><strong>t=1 d=3</strong>（t1_d3、γ=0.500、正解 228）</p><table><tr><td>103</td><td class='n'>× 8</td></tr><tr><td>125</td><td class='n'>× 7</td></tr><tr><td class='correct'>228 ← 正解</td><td class='n'>× 1</td></tr></table><p><strong>t=1 d=4</strong>（t1_d4、γ=1.000、正解 228）</p><table><tr><td>103</td><td class='n'>× 6</td></tr><tr><td>125</td><td class='n'>× 5</td></tr><tr><td class='correct'>228 ← 正解</td><td class='n'>× 1</td></tr></table><p><strong>t=2 d=0</strong>（t2_d0、γ=1.000、正解 228）</p><table><tr><td class='correct'>228 ← 正解</td><td class='n'>× 12</td></tr></table><p><strong>t=2 d=1</strong>（t2_d1、γ=1.000、正解 228）</p><table><tr><td class='correct'>228 ← 正解</td><td class='n'>× 12</td></tr></table><p><strong>t=2 d=2</strong>（t2_d2、γ=1.000、正解 228）</p><table><tr><td class='correct'>228 ← 正解</td><td class='n'>× 12</td></tr></table><p><strong>t=2 d=3</strong>（t2_d3、γ=1.000、正解 228）</p><table><tr><td class='correct'>228 ← 正解</td><td class='n'>× 12</td></tr></table><p><strong>t=2 d=4</strong>（t2_d4、γ=1.000、正解 228）</p><table><tr><td class='correct'>228 ← 正解</td><td class='n'>× 12</td></tr></table></div><h2>凡例</h2><div class='legend'><dl>
+<dt>正解山占有率</dt><dd>n 標本のうち、正解値を含む山に入った割合。</dd>
+<dt>γ（偶然水準）</dt><dd>そのセルで、残る不明コードから当て推量したときに
+当たる確率。<code>1/C(6−t−d, 2−t)</code> で計算する（t=2 は 1）。
+測った占有率をこれと突き合わせる。</dd>
+<dt>山の数</dt><dd>回答を数直線に並べ、値の広がりに対して 5% より広い隙間で
+切った数。山の数は先に決めていない。</dd>
+<dt>棄権率</dt><dd>「対応がデータに無い」と「だから出せない」を明示した標本の割合。
+<strong>数値0の機械的判定ではない</strong>——0 が正当な解になり得る課題への拡張に
+備え、理由の明示を要件とする。<strong>山の統計は非棄権の数値回答で計算し</strong>、
+棄権込みの値は感度分析として別に持つ。総トークンは全標本。</dd>
+<dt>V</dt><dd>そのセルの変種数 <code>C(2,t)·C(4,d)</code>。同一セル内では同じ seed
+集合を全変種に交差させている。</dd>
+<dt>log2H</dt><dd>残存不確実性（bit）。<code>H = C(6−t−d, 2−t)</code>。
+集計の横軸は d ではなくこれ——外れ1個の追加は等量の情報増加ではないため。</dd>
+<dt>token中央値</dt><dd>そのセルの1標本あたり総トークンの中央値。</dd>
+<dt>色</dt><dd>
+<span class='swatch' style='background:var(--above)'></span>正解山占有率 &gt; γ ／
+<span class='swatch' style='background:var(--near)'></span>γ の ±0.05 以内 ／
+<span class='swatch' style='background:var(--below)'></span>正解山占有率 &lt; γ。
+<strong>色は数値の規則だけで付けている。</strong>壊れ方の型のラベルは付けない——
+どの型に当たるかの帰属は読む側の仕事で、図に混ぜると判断済みに見えてしまうから。</dd>
+</dl>
+<p><strong>n=10 はパイロット水準であり、検定はしていない。</strong>
+占有率と γ を並べて置いてあるだけで、差が偶然でないとは主張していない。</p>
+</div></body></html>
