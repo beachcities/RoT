@@ -44,6 +44,8 @@ REFERENCE = [
     "run_20260825T033022Z.json",
     # 容量だけを変えた一点。自己記述性が容量を代替するかを見るためのもの。
     "run_20260826T014056Z.json",
+    # 計器v2（分布プローブ）のスモーク。v3 とは実装非互換で、数値は直接比較しない。
+    "run_20260826T030829Z.json",
 ]
 
 # 台帳の注記。機械で書けないので手で書く。キーはファイル名。
@@ -107,6 +109,19 @@ NOTES = {
                                  "全体と同じで、水準ごと退避は保護を増やさず、走行中の"
                                  "セッションへ触る危険だけを足すという判断による。実際に1区間で"
                                  "完走した。20試行・エラー0",
+    "run_20260826T030829Z.json": "**計器v2（分布プローブ）のスモーク。** 組は "
+                                 "`v4_distribution` で、**v3 とは実装非互換**"
+                                 "（再試行ループを廃し、一発勝負で n 標本を引く）。"
+                                 "**v3 の数値とは直接比較しない。** 仕様の正本は "
+                                 "`paper/notes/instrument-v2-distribution-probe.md`。"
+                                 "セルは (t=0, d=2) の1つ、偶然水準 γ=1/6。"
+                                 "**選定理由**: 的が未記載なので「散る」型が予想され"
+                                 "分布の立ち方を見られること、d>0 なので外れ部分集合の"
+                                 "選び方が意味を持ち、振り方の影響を同じセルで確認できること。"
+                                 "条件は2本——外れの部分集合を標本間で**振る**側 n=10 と"
+                                 "**固定**側 n=10。Qwen/Qwen3.5-9B thinking on、"
+                                 "Colab CLI（A100-40GB）、試行上限1。20標本・エラー0。"
+                                 "**n=10 はパイロット水準なので検定はしていない**",
 }
 
 TRIAL_COLUMNS = [
@@ -206,6 +221,9 @@ def render_ledger(runs):
         inputs = run.get("inputs") or {}
         conditions = inputs.get("conditions") or {}
         first = next(iter(conditions.values()), None)
+        # 計器v2 の条件は文書の変種を並べて持つ。レコードはその先にある。
+        if isinstance(first, dict) and isinstance(first.get("variants"), list) and first["variants"]:
+            first = first["variants"][0]
         records = len(first["records"]) if isinstance(first, dict) and "records" in first else (
             len(first) if isinstance(first, list) else "?")
         note = NOTES.get(path.name, "")
