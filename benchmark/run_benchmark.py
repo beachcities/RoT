@@ -584,6 +584,20 @@ def response_meta(response):
     }
 
 
+def pick_variant(data, repeat):
+    """条件が変種を持つなら、反復番号で1つ選ぶ。持たなければそのまま返す。
+
+    計器v2（v4_distribution）で使う。外れコードのどの部分集合を書くかは一通りでは
+    なく、固定すると特定の残候補集合の癖を測ることになる。**標本間で振るのが既定。**
+    どの標本が何を見たかは、反復番号から決まるので後から辿れる。
+    返り値は (投げる文書, 変種の番号)。変種を持たない条件では番号は None。
+    """
+    if isinstance(data, dict) and isinstance(data.get("variants"), list) and data["variants"]:
+        index = (repeat - 1) % len(data["variants"])
+        return data["variants"][index], index
+    return data, None
+
+
 def run_task(client, model, condition, data, task, max_attempts=None, repeat=1, prompts=None,
              sampling=None):
     """1タスクを1条件で1回走らせる。正答するか試行を使い切るまで繰り返す。
@@ -595,11 +609,12 @@ def run_task(client, model, condition, data, task, max_attempts=None, repeat=1, 
     prompts = load_prompts(PROMPT_SET) if prompts is None else prompts
     if sampling is None:
         sampling = {"requested": sampling_params(), "used": sampling_params(), "dropped": {}}
+    payload, variant = pick_variant(data, repeat)
     messages = [
         {
             "role": "user",
             "content": prompts["prompt"].format(
-                data=json.dumps(data, ensure_ascii=False, indent=2),
+                data=json.dumps(payload, ensure_ascii=False, indent=2),
                 query=task["query"],
             ),
         }
@@ -698,6 +713,8 @@ def run_task(client, model, condition, data, task, max_attempts=None, repeat=1, 
         "condition": condition,
         "task_id": task["task_id"],
         "repeat": repeat,
+        # どの変種（外れコードの部分集合）を見たか。変種を持たない条件では null。
+        "variant": variant,
         # この反復で実際に送った seed。サーバに拒まれて落ちていれば null。
         # 規則は fingerprint.settings.seed_rule にある。
         "seed": seed_for_repeat(repeat) if "seed" in sampling["used"] else None,

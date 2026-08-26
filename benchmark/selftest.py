@@ -851,7 +851,9 @@ def _():
 
 
 def all_suites():
-    return sorted(d.name for d in (rb.SUITES_DIR).iterdir() if d.is_dir())
+    # tasks.json を持つものだけが組。__pycache__ のような副産物は数えない。
+    return sorted(d.name for d in (rb.SUITES_DIR).iterdir()
+                  if d.is_dir() and (d / "tasks.json").is_file())
 
 
 @check("組: suites/ 配下がすべて読める")
@@ -874,7 +876,16 @@ def _():
 
 
 def records_of(data):
+    """条件が指すレコード。計器v2 は文書の変種を並べて持つので、その先を見る。"""
+    if isinstance(data, dict) and isinstance(data.get("variants"), list):
+        return data["variants"][0]["records"]
     return data["records"] if isinstance(data, dict) else data
+
+
+def is_level_ladder(name):
+    """水準梯子の組かどうか。計器v2（分布プローブ）は梯子ではないので外す。"""
+    _, _, spec = rb.load_suite(name)
+    return all("level" in c for c in spec)
 
 
 @check("組: すべての条件が同じ件数のレコードを指している")
@@ -883,6 +894,10 @@ def _():
         _, conditions, _ = rb.load_suite(name)
         counts = {c: len(records_of(d)) for c, d in conditions.items()}
         assert len(set(counts.values())) == 1, (name, counts)
+        for cname, data in conditions.items():
+            if isinstance(data, dict) and isinstance(data.get("variants"), list):
+                sizes = {len(v["records"]) for v in data["variants"]}
+                assert len(sizes) == 1, (name, cname, sizes)
 
 
 @check("組: 最下位の条件に単位・業種名・活動状態の語が現れない")
@@ -891,6 +906,8 @@ def _():
     # 検査対象は各組の先頭の条件（もっとも自己記述性が低い側）。
     forbidden = ["百万円", "情報通信", "製造業", "unit", "active", "revenue", "industry"]
     for name in all_suites():
+        if not is_level_ladder(name):
+            continue
         _, conditions, _ = rb.load_suite(name)
         first = next(iter(conditions.values()))
         text = json.dumps(first, ensure_ascii=False)
@@ -906,10 +923,15 @@ def _():
         path = rb.suite_dir(name)
         if not (path / "conditions.json").is_file():
             continue
-        # conditions.json のある組は、置いたものを段ごとに書いてあること
+        # conditions.json のある組は、置いたものを条件ごとに書いてあること。
+        # 梯子は「何を置いたか」（placed）、計器v2 は格子の座標と偶然水準。
         for entry in spec:
-            assert "placed" in entry, (name, entry["name"])
             assert (path / entry["file"]).is_file(), (name, entry["file"])
+            if is_level_ladder(name):
+                assert "placed" in entry, (name, entry["name"])
+            else:
+                for key in ("t", "d", "arm", "gamma"):
+                    assert key in entry, (name, entry["name"], key)
 
 
 @check("組: 3条件以上の組でも集計と描画が通る")
@@ -1260,6 +1282,52 @@ def _():
     finally:
         os.unlink(name)
     assert [r["repeat"] for r in kept] == [1, 2], [r["repeat"] for r in kept]
+
+
+@check("計器v2: 偶然水準 gamma が仕様の値と一致する")
+def _():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "build_v4", pathlib.Path(__file__).resolve().parent / "suites" / "build_v4.py")
+    b4 = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(b4)
+    # 仕様（paper/notes/instrument-v2-distribution-probe.md 第4節）が挙げている例
+    assert abs(b4.gamma(0, 0) - 1 / 15) < 1e-12
+    assert abs(b4.gamma(0, 4) - 1.0) < 1e-12
+    assert abs(b4.gamma(1, 3) - 0.5) < 1e-12
+    assert abs(b4.gamma(0, 2) - 1 / 6) < 1e-12      # スモークで使うセル
+    assert b4.gamma(2, 0) == 1.0                     # 的が全部書いてある
+
+
+@check("計器v2: 変種は反復番号で巡回し、固定側は動かない")
+def _():
+    data = {"variants": ["A", "B", "C"]}
+    assert [rb.pick_variant(data, r) for r in (1, 2, 3, 4)] == [
+        ("A", 0), ("B", 1), ("C", 2), ("A", 0)]
+    fixed = {"variants": ["only"]}
+    assert [rb.pick_variant(fixed, r)[1] for r in (1, 2, 3)] == [0, 0, 0]
+    # 変種を持たない v3 の条件は素通しする
+    plain = {"records": [1, 2]}
+    assert rb.pick_variant(plain, 5) == (plain, None)
+
+
+@check("計器v2: 山推定は数を先に決めず、隙間で切る")
+def _():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "sv4", pathlib.Path(__file__).resolve().parent / "summarize_v4.py")
+    sv4 = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(sv4)
+    # 固まっていれば1つ
+    assert len(sv4.cluster([228, 228, 228])) == 1
+    # 離れていれば分かれる
+    groups = sv4.cluster([228, 228, 1717, 1717])
+    assert len(groups) == 2, groups
+    # 全部ばらけると山も増える
+    assert len(sv4.cluster([100, 500, 900, 1300])) == 4
+    # 散らばりは、固まれば 0、二分すれば 1 ビット
+    assert sv4.entropy([10]) == 0.0
+    assert abs(sv4.entropy([5, 5]) - 1.0) < 1e-12
 
 
 def main():
