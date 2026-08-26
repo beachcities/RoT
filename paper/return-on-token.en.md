@@ -190,7 +190,7 @@ A by-product: the limits of reproducibility were also measured. The first repeti
 
 ### A Quarter of the Capacity: The Boundary Holds, but One Level Falls
 
-A sixth model, Qwen3.5-2B, was run against the same inputs on the same hardware as the reference route (A100-40GB), with one repetition. It shares the 9B's family, generation, and architecture, with roughly 4.2 times fewer parameters (2,274,069,824 against 9,653,104,368) — a pair in which capacity is the only thing that moves, unconfounded by lineage.
+A sixth model, Qwen3.5-2B, was run against the same inputs on the same hardware as the reference route (A100-40GB), with one repetition. It shares the 9B's family, generation, and architecture, with roughly 4.2 times fewer parameters (2,274,069,824 against 9,653,104,368) — a pair that holds family and architecture fixed while changing capacity by a large factor (a difference in generation behaviour — whether the model thinks — remains).
 
 The boundary appeared at the same place (l5→l6). The step was 8.5× (69,670 → 8,220). Below l6 the model solved 1 cell of 12; at l6 and above, 6 of 8, taking the levels where the meaning of the codes is stated in the document (l6, l7) and the prose level (l9) in one or two attempts. Even at a quarter of the capacity, where the needed information reaches the model, it gets to the answer in minimal attempts — the claim placed in Section 4, that self-description widens the range of tasks a smaller model can complete (L4), has its first measurement in this single point.
 
