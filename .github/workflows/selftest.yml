@@ -34,5 +34,16 @@ jobs:
           python suites/build_v4.py
           git diff --exit-code -- suites/v4_distribution
 
+      - name: 本測定の組を作り直して差分が出ないことを確かめる
+        # 本測定で実際に使う m1/m2 も、生成器とずれていたら止める。
+        # 既存のパイロット組の検査（上の段）はそのまま。
+        #
+        # こちらは untracked も見る——新しく足した組では「生成されたが commit
+        # されていないファイル」が現実的な抜けで、git diff だけでは素通りする。
+        run: |
+          python suites/build_v4_main.py
+          git diff --exit-code -- suites/v4_distribution_m1 suites/v4_distribution_m2
+          test -z "$(git status --porcelain -- suites/v4_distribution_m1 suites/v4_distribution_m2)"
+
       - name: selftest
         run: python selftest.py
