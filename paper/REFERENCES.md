@@ -47,7 +47,7 @@
 
 ## 測定に用いたモデルと環境
 
-第5節の測定は、API経由の OpenAI gpt-4o-mini / gpt-4.1-mini / gpt-5.4 と、自前で回した Allen Institute for AI の Olmo-3-7B-Think、および同じく自前で回した Qwen3.5-9B を用いました。
+第5節の測定は、API経由の OpenAI gpt-4o-mini / gpt-4.1-mini / gpt-5.4 と、自前で回した Allen Institute for AI の Olmo-3-7B-Think、および同じく自前で回した Qwen3.5-9B と Qwen3.5-2B を用いました。
 
 - allenai/Olmo-3-7B-Think
   https://huggingface.co/allenai/Olmo-3-7B-Think
@@ -56,6 +56,10 @@
 - Qwen/Qwen3.5-9B
   https://huggingface.co/Qwen/Qwen3.5-9B
   重みが公開されたオープンウェイト（Apache-2.0）。学習データは公開されておらず、上記の Open Source AI Definition は満たしません。vLLM で自前で回し、thinking の有効・無効（`enable_thinking`）を切り替えた2条件で測定しています。
+
+- Qwen/Qwen3.5-2B
+  https://huggingface.co/Qwen/Qwen3.5-2B
+  9Bと同一系統・同一アーキテクチャのオープンウェイト（Apache-2.0）。学習データは公開されておらず、上記の Open Source AI Definition は満たしません。vLLM で自前で回しています（第5節の容量比較に使用）。
 
 実行時の指紋（入力データ・プロンプト・サンプリング設定・コードのハッシュ）はすべて結果ファイルに記録しています。再現手順は [`benchmark/`](../benchmark/) を参照してください。
 
