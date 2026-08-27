@@ -287,6 +287,8 @@ Read backwards, the log of recursive tokens an agent spent filling in missing co
 
 National master data — corporate registries, addresses, place names, statutes — sits at junctions referenced at enormous volume. Working outward from those junctions, and absorbing the fixed cost quickly, is a prioritisation that measured logs could in principle establish quantitatively.
 
+Note that the reduction figures entering this formula were measured on this paper's tasks; whether they carry over unchanged to other tasks or to real data has not been measured.
+
 ---
 
 ## 7. Where Open Data as a Digital Public Good Meets ROT
