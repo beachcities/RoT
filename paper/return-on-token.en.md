@@ -198,6 +198,36 @@ The same run also shows a level where the substitution does not hold. At the one
 
 Two caveats. First, although THINKING=on was sent and the server did not refuse it, the 2B emitted no reasoning text in any of the twenty trials. It is effectively running without thinking, which makes the 9B's thinking-off condition the closer comparison (a comparison with the thinking-on condition carries a second difference besides capacity). Second, with one repetition, this system's variance has not been measured. The 8.5× step sits above the within-level spread found in the previous subsection (at most 2.7×), but that spread was measured on different systems and different hardware (80GB), so it is not a direct yardstick.
 
+### Re-measuring with Single-Shot Distributions — What Held Steady and What Did Not
+
+The measurements so far carry two weaknesses that come from the method itself: the height of the step is set by the retry ceiling, and the outcome is a binary of correct or not. So a separate line of instrumentation was built that drops retries altogether, draws repeated single-shot responses under identical conditions, and reads whether the distribution of answers concentrates on the correct value (the implementation is incompatible with the earlier series, and no direct numerical comparison is made). The design is a grid of 15 cells: the number of targets stated, t (0–2), crossed with the number of distractors stated, d (0–4). What is written determines the number of hypotheses that remain, H = C(6−t−d, 2−t), and γ = 1/H — the accuracy of an uninformed guess — serves as each cell's chance level. Variants and seeds are fully crossed; peaks (concentrations of answers) are estimated from density on the number line with a relative threshold of 5%; abstentions (responses that explicitly decline to answer, with a stated reason) are counted separately. A 200-sample pilot was run first; the decision rules were then frozen in writing after seeing its observations; and the confirmatory measurement ran 200 samples × 2 repetitions (n=400) on a different seed band, from a single frozen commit. Because the pilot was used to set the rules, it is not mixed into the confirmatory estimates and appears only as an external reference.
+
+Start with what held steady. The five cells of the row where both targets are stated (t=2, H=1 in every cell) came out identical across the pilot and both repetitions: correct-peak share 1.00, abstention rate 0.00. Moving the peak-estimation threshold from 2% to 20% leaves this row at one peak throughout. In this row, the single-shot distribution concentrated on the single correct value in all three runs, and that concentration did not move with repetition or threshold.
+
+In the remaining rows (t≤1), the cell-level values did not hold steady under independent repetition. Stated as fact: the between-repetition difference (absolute) in correct-peak share has a median of 0.10 and a maximum of 0.60 (t0_d4: 0.00 against 0.60); for abstention rates, a median of 0.08 and a maximum of 0.19. One cell exceeded γ+0.05 in each repetition, but they are different cells (t0_d1 at 0.56 in repetition 1; t0_d2 at 0.25 in repetition 2). The cell-level terrain seen in the pilot — no cell above γ, and a split in shares across the several routes to H=1 — likewise does not reappear in that form. The pre-frozen precondition for curve fitting, "two or more points above γ+0.05," was met in none of the four sections (t=0 and t=1, in each repetition), and following the frozen rule, "no fit established" is recorded as a formal result.
+
+| Cell | γ | Correct peak r1 | r2 | \|diff\| | Abstention r1 | r2 | \|diff\| |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| t0_d0 | 0.067 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 |
+| t0_d1 | 0.100 | 0.56 | 0.00 | 0.56 | 0.25 | 0.08 | 0.17 |
+| t0_d2 | 0.167 | 0.00 | 0.25 | 0.25 | 0.17 | 0.33 | 0.17 |
+| t0_d3 | 0.333 | 0.00 | 0.29 | 0.29 | 0.33 | 0.42 | 0.08 |
+| t0_d4 | 1.000 | 0.00 | 0.60 | 0.60 | 0.67 | 0.58 | 0.08 |
+| t1_d0 | 0.200 | 0.00 | 0.12 | 0.12 | 0.33 | 0.33 | 0.00 |
+| t1_d1 | 0.250 | 0.09 | 0.23 | 0.14 | 0.31 | 0.19 | 0.12 |
+| t1_d2 | 0.333 | 0.00 | 0.08 | 0.08 | 0.38 | 0.50 | 0.12 |
+| t1_d3 | 0.500 | 0.10 | 0.25 | 0.15 | 0.31 | 0.50 | 0.19 |
+| t1_d4 | 1.000 | 0.12 | 0.22 | 0.10 | 0.33 | 0.25 | 0.08 |
+| t2_d0–d4 | 1.000 | 1.00 | 1.00 | 0.00 | 0.00 | 0.00 | 0.00 |
+
+(The t=2 row shows five cells on one line because all five are identical — they are not pooled in the aggregation. Cell n runs 12–24. Both repetitions: 200 samples, no errors, no break in the full crossing. One sample in repetition 1 produced no extractable number; per the frozen rule it is excluded from the divisor and reported separately.)
+
+Abstention needs reading at two levels. At the row level it held steady — the row-wise contrast, abstentions occurring at t≤1 and none at all at t=2, was preserved across all three runs, pilot and both repetitions. At the cell level within t≤1, the rates move between repetitions, as the table shows. From this sample size and two repetitions, they cannot be treated as stable cell-level rates.
+
+What this instrument made visible is that success rates under permitted retries and the concentration of single-shot distributions are different quantities. The measurements earlier in this paper are a binary — did a correct answer appear within the attempt ceiling — while this series measures how far a single response's distribution concentrates on the correct value, and how much that concentration moves under repetition. The t=2 concentration is fully stable across three runs, while the t≤1 cell-level terrain moves substantially under independent repetition — a contrast that the retry-based success rates alone had not shown. The H=1 endpoints are constructed by more than one route — direct statement, and determination by elimination — but the per-route values are not stable in this measurement, so they are left as description, with no attribution to the form of the route.
+
+The reservations: no statistical tests were run (shares were placed next to γ, nothing more). Peak counts depend on the relative threshold — they barely move between 2% and 5% and drop sharply from 10% up (recorded alongside as a sensitivity analysis). One model line (Qwen3.5-9B, thinking on), the same synthetic toy data as the preceding subsections, and two repetitions. That the cell-level terrain "does not hold steady" is not the same as "no structure exists" — separating the two calls for further verification, including additional measurement with more repetitions or larger per-cell n.
+
 ### The Derivation from Operational Logs Actually Ran
 
 Section 6 sets out, as a hypothesis, the idea of working backwards from logs to a requirements specification. Against this reasoning text, it could be tried.
