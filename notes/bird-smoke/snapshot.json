@@ -1,0 +1,16 @@
+[
+  {
+    "file": "body.csv",
+    "url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000040479787&fileKind=1",
+    "bytes": 3106764,
+    "sha256": "f27d4459eb68e7a99eb4aecce4a6541aae694236d936db5a65154946978e6cf0",
+    "fetched_utc": "2026-08-27T22:37:15Z〜22:37:23Z"
+  },
+  {
+    "file": "codelist.html",
+    "url": "https://www.e-stat.go.jp/dbview?sid=0003411702",
+    "bytes": 560201,
+    "sha256": "3f427a09e51d4a02961d6743f02dd097034680aec528c6d54a33e5372ee0bf40",
+    "fetched_utc": "2026-08-27T22:37:15Z〜22:37:23Z"
+  }
+]
