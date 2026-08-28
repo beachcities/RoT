@@ -1,6 +1,6 @@
 # Cover letter — Data & Policy submission (draft)
 
-*Draft 2026-08-28. The single remaining bracketed item (ORCID) is entered at submission. To be pasted into ScholarOne at submission.*
+*Draft 2026-08-28. To be pasted into ScholarOne at submission.*
 
 ---
 
@@ -16,7 +16,7 @@ The article proposes Return on Token (RoT), an indicator of AI inference cost de
 
 **Statements.** The manuscript includes Data Availability, Funding, Author Contributions (CRediT; sole author), and Competing Interests statements. The competing-interests statement discloses the author's employment at the Digital Agency, Government of Japan, and the independent, personal character of this work.
 
-The sole and corresponding author is Masayuki Yamada, Independent researcher, Chiba, Japan (ORCID: [to be entered at submission]).
+The sole and corresponding author is Masayuki Yamada, Independent researcher, Chiba, Japan (ORCID: 0009-0001-0963-8460).
 
 Thank you for your consideration.
 
