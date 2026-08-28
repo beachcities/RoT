@@ -11,7 +11,7 @@
 | [`paper/return-on-token.md`](paper/return-on-token.md) | 試論本体（ディスカッション・ペーパー、公開固定版） |
 | [`paper/return-on-token.en.md`](paper/return-on-token.en.md) | 英語版（下訳）。日本語版と食い違う場合は日本語版が正 |
 | [`benchmark/`](benchmark/) | 仮説を検証する極小ベンチマークと全測定記録 |
-| [`submission/dap/`](submission/dap/) | 学術誌投稿用の派生版（下記) |
+| [`submission/dap/`](submission/dap/) | 学術誌投稿用の派生版（下記） |
 
 ## 試論の骨子
 
