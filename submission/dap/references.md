@@ -1,6 +1,6 @@
 # References — Cambridge author–date (Data & Policy submission)
 
-*All bibliographic details below were verified against actual sources on 2026-08-28, except the single bracketed item (UNESCO publication year), which is pending verification against the unesdoc record and must not be filled by guess. Entries are alphabetical by author. Web sources carry access-relevant URLs; DOIs are given where verified.*
+*All bibliographic details below were verified against actual sources on 2026-08-28 (the UNESCO publication year was confirmed as 2023 by the author against the unesdoc record, identifier pf0000385841, as listed by UNRIC). Entries are alphabetical by author. Web sources carry access-relevant URLs; DOIs are given where verified.*
 
 Bresnahan TF and Trajtenberg M (1995) General purpose technologies 'Engines of growth'? *Journal of Econometrics* 65(1), 83–108.
 
@@ -28,7 +28,7 @@ Sui Y, Chuang Y-N, Wang G, Zhang J, Zhang T, Yuan J, Liu H, Wen A, Zhong S, Chen
 
 Tokenomics Foundation (n.d.) The five-layer Tokenomics stack. Linux Foundation. Available at https://www.tokeneconomics.com/projects/the-five-layer-tokenomics-stack/
 
-UNESCO ([publication year: to be verified against the unesdoc record — do not guess]) *Open Data for AI: What Now?* Paris: UNESCO. Available at https://unesdoc.unesco.org/ark:/48223/pf0000385841
+UNESCO (2023) *Open Data for AI: What Now?* Paris: UNESCO. Available at https://unesdoc.unesco.org/ark:/48223/pf0000385841
 
 Wei J, Wang X, Schuurmans D, Bosma M, Ichter B, Xia F, Chi EH, Le QV and Zhou D (2022) Chain-of-thought prompting elicits reasoning in large language models. In *Advances in Neural Information Processing Systems 35 (NeurIPS 2022)*. arXiv:2201.11903.
 
