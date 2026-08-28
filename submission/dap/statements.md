@@ -1,6 +1,6 @@
 # Front matter and disclosure statements — Data & Policy submission
 
-*Approved wordings (2026-08-28 decisions). Working file for the manuscript's front matter and end-of-text statements. Bracketed items are pending factual verification — never to be filled by guess.*
+*Approved wordings (2026-08-28 decisions). Working file for the manuscript's front matter and end-of-text statements. Remaining bracketed/noted items are pending factual verification — never to be filled by guess.*
 
 ## Title
 
@@ -46,6 +46,6 @@ Competing interests: The author is employed by the Digital Agency, Government of
 
 ## Acknowledgements (including AI-use declaration)
 
-The author made use of large language model assistants in preparing this article and its underlying benchmark: [tools with material contribution, enumerated from provenance records; names, versions, and periods to be verified from the actual records — not to be estimated] for drafting and editing text in Japanese under the author's direction, translating the author's Japanese text into English, and writing and reviewing benchmark and analysis code. All reported measurements were produced by the published benchmark code; the sentence classifiers used in the analysis are rule-based and do not use LLMs, as stated in the text. The author reviewed and verified all content and is entirely responsible for the scientific content of the paper.
+The author used Google Gemini 3.1 Pro in August 2026 for early-stage conceptual exploration that contributed to the framing of the study and the development and naming of Return on Token (RoT), including discussions of token efficiency, semantic and inference-load offloading, Frugal AI, and AI-ready data design. The author also used Anthropic Claude Opus 5 (model `claude-opus-5`) via the Claude Code for VS Code extension v2.1.250 (August 2026) for developing and reviewing the benchmark and analysis code and for repository operations; Anthropic Claude Fable 5 via the Claude chat interface (August 2026) for manuscript drafting, editing, and translation of the author's Japanese text into English; and OpenAI ChatGPT (GPT-5.6 Sol; August 2026) for drafting and editing portions of the manuscript and front-matter statements, methodological and audit review, and wording and policy-framing review. All reported measurements were produced by the published benchmark code; the sentence classifiers used in the analysis are rule-based and do not use LLMs, as stated in the text. The author reviewed and verified all content and is entirely responsible for the scientific content of the paper.
 
-*(The same declaration, in two sentences, goes in the cover letter.)*
+*(AI-use declaration finalized 2026-08-28 from provenance records and the author's testimony: repository commit trailers enumerated by machine scan — Claude Opus 5, 2026-08-19–28; Claude Fable 5, 2026-08-26–28 — plus the author's confirmation of the Gemini and ChatGPT sessions. The same declaration, condensed to two sentences, goes in the cover letter.)*
