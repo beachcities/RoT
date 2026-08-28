@@ -1,6 +1,6 @@
 # Front matter and disclosure statements — Data & Policy submission
 
-*Approved wordings (2026-08-28 decisions). Working file for the manuscript's front matter and end-of-text statements. Remaining bracketed/noted items are pending factual verification — never to be filled by guess.*
+*Approved wordings (2026-08-28 decisions). Working file for the manuscript's front matter and end-of-text statements. All factual disclosures verified and finalized 2026-08-28 (AI use: provenance scan + author testimony; competing interests: fact-checked by the author; ORCID: entered in the cover letter).*
 
 ## Title
 
@@ -40,9 +40,9 @@ Independent researcher, Chiba, Japan.
 
 ## Competing interests
 
-Competing interests: The author is employed by the Digital Agency, Government of Japan, where his responsibilities include open data policy. This article is independent, personal work and does not represent the views of the Digital Agency or the Government of Japan. The employer had no role in the study design, measurement, analysis, or the decision to publish.
+Competing interests: The author is employed by the Digital Agency, Government of Japan, where his responsibilities include open data policy. This article is independent, personal work and does not represent the views of the Digital Agency or the Government of Japan. The employer had no role in the study design, measurement, analysis, or scientific conclusions.
 
-*(To be fact-checked by the author before submission.)*
+*(Fact-checked and finalized by the author, 2026-08-28.)*
 
 ## Acknowledgements (including AI-use declaration)
 
