@@ -5,6 +5,7 @@
 - 固定版 `paper/return-on-token.md`（ja正本）・`paper/return-on-token.en.md` は**変更しません**。投稿版はここに別ファイルとして作ります。
 - 投稿版の正本は英語です（試論の正本＝jaという関係は固定版側で不変）。
 - 決定事項（2026-08-28決裁）：タイトル "Return on Token: An Indicator Linking Data Self-Description to AI Inference Token Consumption"／頭字語の言葉遊びの一文は投稿版では削除／Affiliation＝Independent researcher基本／Keywords＝open government data; data self-description; inference-time scaling; token efficiency; AI governance／Measurementsは時系列を保存しつつ方法・結果・robustness等へ再構成。
+- 表記統一（2026-08-28決裁）：投稿派生版は全体で **RoT** 表記に統一する。固定版の **ROT** 表記は変更しない。
 - 関連研究のgap文（凍結）："Within this bounded review, we did not identify prior work that directly measures inference token consumption as a function of whether task-relevant data descriptions are available to the model."
 - 新規参照文献セット（12件、2026-08-28凍結）はこのREADMEと同じ決裁で確定。既存 `paper/REFERENCES.en.md` 収載の一次資料は続投。
 
