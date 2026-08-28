@@ -138,4 +138,5 @@ This paper proposed Return on Token — outcome obtained per total tokens invest
 
 ## References
 
-*[TODO: Cambridge A (author–date). Set frozen 2026-08-28: 12 new entries (Wei 2022; DeepSeek-AI 2025; Sui et al. 2025; Chen et al. 2024; Wilkinson et al. 2016; Gebru et al. 2021; Sambasivan et al. 2021; Quarati 2023; Nikiforova et al. 2023; European Commission 2023; UNESCO 2023; Bresnahan and Trajtenberg 1995) + carried-over primary sources from `paper/REFERENCES.en.md` (Gartner 2026; Goldman Sachs Research 2026; Luccioni and Gamazaychikov 2025; Tokenomics Foundation n.d.; MLPerf Power; AI Energy Score; TokenPowerBench; OSI OSAID 1.0; model cards). DOI reachability check for the five classics at formatting time.]*
+<!-- BUILD:INLINE references.md -->
+*(Assembly rule: the final submission output replaces this comment block with the entry list from [`references.md`](references.md), verbatim, at generation time. `references.md` is the single editing master for the reference list; no hand-maintained duplicate is kept in this file, so the two cannot drift.)*
