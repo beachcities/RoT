@@ -1,0 +1,45 @@
+diff --git a/benchmark/make_run_records.py b/benchmark/make_run_records.py
+index 8785670..2f7d7cd 100644
+--- a/benchmark/make_run_records.py
++++ b/benchmark/make_run_records.py
+@@ -118,6 +118,32 @@ def table(rows):
+     return out
+ 
+ 
++def grid_lines(run):
++    """計器v2 の格子をテキストで載せる。**HTML が開けない場所のために併存させる。**
++
++    以前は生成後に手で継ぎ足していたが、この生成器は記録を毎回丸ごと書き直すので
++    次の再生成で消えていた（4bbbd47 で実際に消えた）。**格子は結果 JSON から
++    機械再現できる**ので、生成の側に置く。格子を持たない組では何も足さない。
++    """
++    if not run.get("condition_spec"):
++        return []
++    try:
++        import v4_grid
++        cells = v4_grid.collect(run)
++    except Exception:
++        return []
++    if not cells or all(c.get("t") is None for c in cells.values()):
++        return []
++    # 併記する HTML が無い記録には載せない（存在しない先を指してしまう）。
++    html_name = f"{run.get('run_at')}_grid.html"
++    if not (Path(__file__).resolve().parent / "results" / "reference" / "runs" / html_name).exists():
++        return []
++    return ["", "## 格子（テキスト版）", "",
++            f"同じ内容の一枚 HTML は `{run.get('run_at')}_grid.html`。"
++            "**HTML が開けない場所のために併存させている。**", "",
++            "```", v4_grid.text_grid(cells), "```"]
++
++
+ def render_record(run, ledger_note=""):
+     # 保存されている summary は当時の集計コードのもので、列が足りないことがある。
+     # 常に現在のコードで作り直す。何が表示されたかを再現するのではなく、
+@@ -146,6 +172,7 @@ def render_record(run, ledger_note=""):
+               "以下はこのランに固有のもの。", ""]
+     run_only = summarize.run_caveats(summary)
+     lines += (["```"] + run_only + ["```"]) if run_only else ["（なし）"]
++    lines += grid_lines(run)
+     return "\n".join(lines) + "\n"
+ 
+ 
