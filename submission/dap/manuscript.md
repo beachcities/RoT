@@ -36,7 +36,51 @@ The hypothesis has several components, and they do not share one evidential stat
 
 ## 4. Measurements
 
-*[TODO: from frozen §5, preserving the chronological measurement series, reorganized into methods / results / robustness per the 2026-08-28 decision. Includes the retraction record and the measuring-side traps.]*
+**4.1 Setup and instruments.** The same tasks were posed against data varied across ten levels of self-description, and token consumption per outcome compared. The levels combine two axes: what is written (from nothing, through meaningful field names and units, to the meanings of codes) and where it sits (inside the record, in a document header, or as an external reference only). Two synthetic tasks were used throughout: a main task requiring the meaning of a code, designed so that it cannot be inferred from other clues, and a control task solvable by inference from company names even when nothing is stated. When a model fails, it is told to reconsider its premises and retry, up to ten attempts; tokens from failed attempts all count toward the denominator. The runtime environment, input data, prompts, and sampling settings are recorded as hashes in the result files, and reproduction steps are published with the benchmark.
+
+Measurements were taken in three series, which we keep separate throughout; numbers are comparable within a series, and we do not aggregate across them.
+
+| Series | Execution | Systems | Repetitions | Reported in |
+| --- | --- | --- | --- | --- |
+| Reference route | Provider APIs | gpt-4o-mini; gpt-4.1-mini; gpt-5.4 | 5 per cell | 4.2 |
+| Reference route | Local (vLLM), A100-40GB | Olmo-3-7B-Think; Qwen3.5-9B (thinking on/off); Qwen3.5-2B | 1 | 4.2, 4.4 |
+| Five-repetition local route | Local (vLLM), A100-80GB | Olmo-3-7B-Think; Qwen3.5-9B (thinking on/off) | 5, seed varied per sample | 4.4 |
+| Single-shot instrument | Local, separate implementation | Qwen3.5-9B (thinking on) | pilot 200; confirmatory 200×2 | 4.4 |
+
+The five-repetition route runs on different hardware from the reference route and is treated as a separate route: its figures are not merged with reference-route figures. The single-shot instrument is a separate implementation, incompatible with the retry-based series, and no direct numerical comparison is made with them. Two defects found on the measuring side during this work — a grader flaw and task escape routes — are reported in 4.6, together with the results discarded because of them.
+
+**4.2 Main result: a boundary, not a gradient.** On the reference route, the main task was measured across four systems. The table gives median total tokens at the two levels either side of the boundary.
+
+| Model | l5 (external reference only) | l6 (stated in document) | Ratio | Correct at l0–l5 |
+| --- | --- | --- | --- | --- |
+| gpt-4o-mini | 51,631 | 2,205 | 23.4 | 0/30 |
+| gpt-4.1-mini | 62,885 | 2,146 | 29.3 | 0/30 |
+| gpt-5.4 | 30,288 | 2,084 | 14.5 | 0/30 |
+| Olmo-3-7B-Think | 96,670 | 3,196 | 30.2 | 0/6 |
+
+At every level where the required information was absent from the document, no system solved the main task even once, and every trial ran to the ten-attempt ceiling; at the level where it was present, every system solved it on the first attempt. Total consumption fell by factors of 14 to 30. The boundary appears as a step, not a gradient: the levels below it are not ordered by how much partial description they carry.
+
+Two features of the step matter for what follows. First, the level carrying only an external reference (l5) fell on the same side as stating nothing at all — pointing at a schema and reaching it are not the same thing, the distinction drawn in Section 3.2. Second, the control task shows no step: every system solved it at every level with no substantial difference in consumption. Where a clue exists, the models get there without being told; the boundary appears only where the missing information cannot be inferred. Further systems on the reference route (a thinking-toggle pair and a smaller-capacity model) and the two other series are reported in 4.4.
+
+**4.3 Reading the search: observations from reasoning text.** The three API systems return `reasoning_tokens` as zero and no reasoning text, so their consumption can be measured but not read. Olmo-3-7B-Think, served locally, leaves the contents of its intermediate reasoning as text, and this subsection reports what that text shows on the main task. These are observations of one system's reasoning, and interpretations of it; they are not a causal decomposition of the consumption measured above.
+
+At the external-reference level (l5), the model notices the reference and states that it cannot resolve it ("Since I can't see the external code list (code_list_reference is a url, which I can't access), I need to rely solely on the given data and common sense."). Having said so, it nonetheless spends ten attempts and 279,148 characters of reasoning continuing to guess. At the level stating nothing (l0), it names the gap at the outset ("The problem is, the data doesn't list the industry type for each company.") and rebuilds its own classification on every attempt — the ten answers move 249 → 249 → 264 → 264 → 719 → 943 → 1149 → 943 → 943 → 826, not one guess repeated — across 404,407 characters; partway through it declares its angles exhausted, and the later attempts turn from the data toward inferring what the questioner expects. At the level where the code meanings are stated (l6), the reasoning consists of lookup and addition ("Let me confirm that from the code_definition."), with no hypothesis generation we could identify; the gap between 279,148 characters at l5 and 2,796 at l6 closes on that one lookup. Because characters are no substitute for tokens, the extracted reasoning text was re-counted with the model's own tokeniser: 69,183 tokens at l5 against 1,027 at l6 on the same task. This is an after-the-fact approximation, excluding the enclosing tags and special tokens and therefore erring low; checked against the server-returned consumption, the residual was a median of 4 tokens per attempt (0.06% for Olmo, 0.15% for Qwen, across two tokeniser families).
+
+To put a number on how much of the reasoning concerns the data's gaps, the reasoning of failed attempts was classified sentence by sentence with published, rule-based classifiers (no LLM involved). The share of characters mentioning or guessing at data-side gaps was 16.0% for Olmo and 18.6% for Qwen. The figure moves with the classification rules — up to 23% depending on how sentences touching both sides are treated, down to 1–6% if only explicit statements of absence are counted — and it is a floor for a different quantity than total gap-caused expenditure: a sentence that carries on calculating on top of a guessed correspondence is not captured. Nearly all of it comes from failed attempts at a task built so that a data-side gap is the blocker, so it is not a figure for reasoning in general. One further observation is recorded without resolution: the share of mentions directed at ambiguity in the *question* differed sharply by lineage — 14.3% for Olmo against 3.8% for Qwen — and whether that difference is a habit of how the two write their reasoning, or something substantive, has not been separated.
+
+These observations are consistent with the reading that, on this task, the absent description occasions search and the supplied description makes it unnecessary; the same shape of consumption appeared in the closed systems, where the reasoning cannot be read and attribution is correspondingly harder. We report the pattern as observed, in one open system's text, at the mechanism-visibility level this method affords.
+
+**4.4 Robustness.**
+
+*[TODO: thinking-toggle pair (reference route), five-repetition local route (step vs spread), quarter-capacity single repetition (8.5×, l8 failure), single-shot instrument v2 (t=2 stability, no-fit result). Kept per series, no cross-series aggregation.]*
+
+**4.5 Deriving requirements from logs.**
+
+*[TODO: four-stage derivation, rebuild record, 5% yield, question-side finding.]*
+
+**4.6 Traps on the measuring side.**
+
+*[TODO: grader flaw and discarded results; task escape routes; the 62.7× retraction record (cut-off running total, later filled on the separate route).]*
 
 ## 5. Limitations
 
